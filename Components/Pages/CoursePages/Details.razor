@@ -1,0 +1,88 @@
+﻿@page "/courses/details"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Course Details</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (course is null)
+    {
+        <div style="text-align:center; padding:3rem; color: var(--text-muted);">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading...
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Course Details</h1>
+                <div class="header-meta">Detailed information about <strong>@course.Name</strong></div>
+            </div>
+            <a href="/courses" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </a>
+        </div>
+
+        <div class="card-modern">
+            <div style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+                <div style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Course Name</div>
+                <h2 style="font-size: 1.75rem; color: var(--primary); margin: 0;">@course.Name</h2>
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.25rem;"><i class="fa-solid fa-book-open" style="margin-right: 8px;"></i> Subject</div>
+                    <div style="font-weight: 500; font-size: 1.1rem;">@(course.Subject?.Name ?? "N/A")</div>
+                </div>
+
+                <div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.25rem;"><i class="fa-regular fa-calendar" style="margin-right: 8px;"></i> Semester</div>
+                    <div style="font-weight: 500; font-size: 1.1rem;">@(course.Semester?.Name ?? "N/A")</div>
+                </div>
+
+                <div class="form-full">
+                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-chalkboard-user" style="margin-right: 8px;"></i> Assigned Lecturer</div>
+                    <div style="background: var(--bg-body); padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--border);">
+                        @if (course.Lecture != null)
+                        {
+                            <div style="width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); box-shadow: var(--shadow);">
+                                <i class="fa-solid fa-user-tie"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600;">@course.Lecture.Name</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">@course.Lecture.Email</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <span style="color: var(--text-muted); font-style: italic;">No lecturer assigned</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 1rem;">
+                <a href="@($"/courses/edit?id={course.Id}")" class="btn btn-primary">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                </a>
+                <a href="@($"/courses/delete?id={course.Id}")" class="btn btn-danger" style="background: white; color: var(--danger); border: 1px solid var(--danger);">
+                    <i class="fa-regular fa-trash-can"></i> Delete
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Course? course;
+    [SupplyParameterFromQuery] private int Id { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        course = await context.Courses.Include(c => c.Subject).Include(c => c.Semester).Include(c => c.Lecture).FirstOrDefaultAsync(m => m.Id == Id);
+        if (course is null) NavigationManager.NavigateTo("notfound");
+    }
+}

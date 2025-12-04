@@ -1,0 +1,44 @@
+@page "/enrollments"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using SIMS.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+
+<PageTitle>Enrollments</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Enrollments</h1>
+            <div style="color: var(--text-muted); margin-top: 5px;">Student registration records</div>
+        </div>
+        <div class="stat-text">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span>@(context.Enrollments.Count()) Records</span>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-scroll">
+            <QuickGrid Class="table" Items="context.Enrollments.Include(e => e.Course).Include(e => e.Student)">
+                <PropertyColumn Property="e => e.Course.Name" Sortable="true" Title="Course" />
+                <PropertyColumn Property="e => e.Student.Name" Sortable="true" Title="Student Name" />
+                <PropertyColumn Property="e => e.Student.Email" Sortable="true" Title="Email" />
+
+                <TemplateColumn Title="Actions">
+                    <a href="@($"enrollments/delete?id={context.Id}")" class="btn-icon delete" title="Delete Enrollment">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </a>
+                </TemplateColumn>
+            </QuickGrid>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationDbContext context = default!;
+    protected override void OnInitialized() => context = DbFactory.CreateDbContext();
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

@@ -1,0 +1,83 @@
+@page "/users/delete"
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete User</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (User is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Delete User</h1>
+                <div style="color: var(--text-muted);">Confirm deletion</div>
+            </div>
+        </div>
+
+        <div class="card-modern" style="border-left: 4px solid var(--danger);">
+            <div style="background-color: #fee2e2; padding: 1.5rem; border-radius: 12px; display: flex; gap: 1.25rem; margin-bottom: 2rem; border: 1px solid #fecaca;">
+                <div style="color: var(--danger); font-size: 1.75rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 style="color: #991b1b; margin: 0 0 0.5rem 0; font-size: 1.1rem;">Permanent Deletion</h3>
+                    <p style="color: #b91c1c; margin: 0; font-size: 0.95rem;">
+                        Are you sure you want to delete user <strong>@User.Email</strong>? This cannot be undone.
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 2rem;">
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Full Name</label>
+                    <div style="font-size: 1.1rem; font-weight: 600;">@User.Name</div>
+                </div>
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Student ID</label>
+                    <div style="font-size: 1.1rem; font-weight: 500;">@(User.StudentId ?? "N/A")</div>
+                </div>
+            </div>
+
+            <EditForm OnValidSubmit="DeleteUser" Model="User" FormName="delete-user">
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <a href="/users" class="btn btn-secondary hover-lift">Cancel</a>
+                    <button type="submit" class="btn btn-danger hover-lift">
+                        <i class="fa-solid fa-trash-can"></i> Confirm Delete
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string Id { get; set; } = "";
+    private ApplicationUser? User { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            User = await UserManager.FindByIdAsync(Id);
+            if (User is null) { NavigationManager.NavigateTo("notfound"); return; }
+        }
+    }
+
+    private async Task DeleteUser()
+    {
+        if (User is null) return;
+        var result = await UserManager.DeleteAsync(User);
+        if (!result.Succeeded) return;
+        NavigationManager.NavigateTo("/users");
+    }
+}

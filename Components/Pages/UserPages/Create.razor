@@ -1,0 +1,83 @@
+﻿@page "/users/create"
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create User</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Create New User</h1>
+            <div style="color: var(--text-muted);">Add a new account to the system</div>
+        </div>
+        <a href="/users" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card-modern hover-lift">
+        <EditForm Model="User" OnValidSubmit="AddUser" FormName="create">
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <label class="form-label">Full Name <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="User.Name" class="form-control" placeholder="e.g. Nguyen Van A" />
+                    <ValidationMessage For="() => User.Name" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="User.Email" class="form-control" placeholder="user@example.com" />
+                    <ValidationMessage For="() => User.Email" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <InputText @bind-Value="User.PhoneNumber" class="form-control" placeholder="e.g. 0901234567" />
+                    <ValidationMessage For="() => User.PhoneNumber" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Default Password</label>
+                    <input type="text" class="form-control" value="Password123!" readonly style="background-color: #f1f5f9; color: var(--text-muted); cursor: not-allowed;" />
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        <i class="fa-solid fa-circle-info"></i> User should change this after first login.
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                    <i class="fa-solid fa-user-plus"></i> Create Account
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] private ApplicationUser User { get; set; } = new();
+
+    private async Task AddUser()
+    {
+        User.UserName = User.Email;
+        User.EmailConfirmed = true;
+        var result = await UserManager.CreateAsync(User, "Password123!");
+
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo("/users");
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+            {
+                Console.WriteLine($"Error: {error.Description}");
+            }
+        }
+    }
+}

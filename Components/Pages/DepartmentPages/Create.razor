@@ -1,0 +1,52 @@
+﻿@page "/departments/create"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>New Department</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Create Department</h1>
+            <div style="color: var(--text-muted);">Add a new faculty or division</div>
+        </div>
+        <a href="/departments" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card-modern hover-lift">
+        <EditForm method="post" Model="Department" OnValidSubmit="AddDepartment" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <label class="form-label">Department Name <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="Department.Name" class="form-control" placeholder="e.g. Information Technology" />
+                    <ValidationMessage For="() => Department.Name" class="validation-message" />
+                </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                    <i class="fa-solid fa-check-circle"></i> Create
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] private Department Department { get; set; } = new();
+
+    private async Task AddDepartment()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Departments.Add(Department);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/departments");
+    }
+}

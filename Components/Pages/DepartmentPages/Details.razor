@@ -1,0 +1,65 @@
+﻿@page "/departments/details"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Department Details</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (department is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Department Details</h1>
+                <div style="color: var(--text-muted);">View record for <strong>@department.Name</strong></div>
+            </div>
+            <a href="/departments" class="btn btn-secondary hover-lift">
+                <i class="fa-solid fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <div class="card-modern">
+            <div style="display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #f1f5f9;">
+                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: var(--primary); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: var(--shadow-sm);">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: var(--text-main);">@department.Name</h2>
+                    <span style="background: #f1f5f9; padding: 4px 12px; border-radius: 99px; font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                        System ID: #@department.Id
+                    </span>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                <a href="@($"/departments/edit?id={department.Id}")" class="btn btn-primary hover-lift">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                </a>
+                <a href="@($"/departments/delete?id={department.Id}")" class="btn btn-danger hover-lift" style="background: white; color: var(--danger); border: 1px solid var(--danger); box-shadow: none;">
+                    <i class="fa-solid fa-trash-can"></i> Delete
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Department? department;
+    [SupplyParameterFromQuery] private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        department = await context.Departments.FirstOrDefaultAsync(m => m.Id == Id);
+        if (department is null) NavigationManager.NavigateTo("notfound");
+    }
+}

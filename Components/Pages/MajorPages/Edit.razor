@@ -1,0 +1,91 @@
+﻿@page "/majors/edit"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Major</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (Major is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Edit Major</h1>
+                <div style="color: var(--text-muted);">Update info for <strong>@Major.Name</strong></div>
+            </div>
+            <a href="/majors" class="btn btn-secondary hover-lift">
+                <i class="fa-solid fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <div class="card-modern hover-lift">
+            <EditForm method="post" Model="Major" OnValidSubmit="UpdateMajor" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <input type="hidden" name="Major.Id" value="@Major.Id" />
+
+                <div class="form-grid">
+                    <div class="form-group form-full">
+                        <label class="form-label">Major Name <span style="color:var(--danger)">*</span></label>
+                        <InputText @bind-Value="Major.Name" class="form-control" />
+                        <ValidationMessage For="() => Major.Name" class="validation-message" />
+                    </div>
+
+                    <div class="form-group form-full">
+                        <label class="form-label">Department</label>
+                        <InputSelect @bind-Value="Major.DepartmentId" class="form-select">
+                            <option value="0">-- Select Department --</option>
+                            @foreach (var dept in Departments)
+                            {
+                                <option value="@dept.Id">@dept.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => Major.DepartmentId" class="validation-message" />
+                    </div>
+                </div>
+
+                <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                        <i class="fa-solid fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private int Id { get; set; }
+    [SupplyParameterFromForm] private Major? Major { get; set; }
+    private List<Department> Departments { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Major ??= await context.Majors.FirstOrDefaultAsync(m => m.Id == Id);
+        Departments = await context.Departments.ToListAsync();
+        if (Major is null) NavigationManager.NavigateTo("notfound");
+    }
+
+    private async Task UpdateMajor()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Major!).State = EntityState.Modified;
+        try { await context.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!MajorExists(Major!.Id)) NavigationManager.NavigateTo("notfound");
+            else throw;
+        }
+        NavigationManager.NavigateTo("/majors");
+    }
+    private bool MajorExists(int id) { using var context = DbFactory.CreateDbContext(); return context.Majors.Any(e => e.Id == id); }
+}

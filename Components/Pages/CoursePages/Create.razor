@@ -1,0 +1,102 @@
+﻿@page "/courses/create"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+
+<PageTitle>New Course</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Create Course</h1>
+            <div style="color: var(--text-muted);">Add a new course to the system</div>
+        </div>
+        <a href="/courses" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card-modern hover-lift">
+        <EditForm method="post" Model="Course" OnValidSubmit="AddCourse" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <label class="form-label">Course Name <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="Course.Name" class="form-input" placeholder="e.g. Advanced Web Programming" />
+                    <ValidationMessage For="() => Course.Name" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <InputSelect @bind-Value="Course.SubjectId" class="form-input">
+                        <option value="0">Select Subject...</option>
+                        @foreach (var s in Subjects)
+                        {
+                            <option value="@s.Id">@s.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Course.SubjectId" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Semester</label>
+                    <InputSelect @bind-Value="Course.SemesterId" class="form-input">
+                        <option value="0">Select Semester...</option>
+                        @foreach (var sem in Semesters)
+                        {
+                            <option value="@sem.Id">@sem.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Course.SemesterId" class="validation-message" />
+                </div>
+
+                <div class="form-group form-full">
+                    <label class="form-label">Assign Lecturer</label>
+                    <InputSelect @bind-Value="Course.LectureId" class="form-input">
+                        <option value="">-- Unassigned --</option>
+                        @foreach (var lecturer in Lecturers)
+                        {
+                            <option value="@lecturer.Id">@lecturer.Name (@lecturer.Email)</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Course.LectureId" class="validation-message" />
+                </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                    <i class="fa-solid fa-check-circle"></i> Create Course
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] private Course Course { get; set; } = new();
+    private List<Subject> Subjects { get; set; } = new();
+    private List<Semester> Semesters { get; set; } = new();
+    private List<ApplicationUser> Lecturers { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Subjects = await context.Subjects.AsNoTracking().ToListAsync();
+        Semesters = await context.Semesters.AsNoTracking().ToListAsync();
+        Lecturers = await context.Users.AsNoTracking().ToListAsync();
+    }
+
+    private async Task AddCourse()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Courses.Add(Course);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/courses");
+    }
+}

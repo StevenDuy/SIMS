@@ -1,0 +1,81 @@
+﻿@page "/subjects/delete"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete Subject</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (subject is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Delete Subject</h1>
+                <div style="color: var(--text-muted);">Confirm deletion</div>
+            </div>
+        </div>
+
+        <div class="card-modern" style="border-left: 4px solid var(--danger);">
+            <div style="background-color: #fee2e2; padding: 1.5rem; border-radius: 12px; display: flex; gap: 1.25rem; margin-bottom: 2rem; border: 1px solid #fecaca;">
+                <div style="color: var(--danger); font-size: 1.75rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 style="color: #991b1b; margin: 0 0 0.5rem 0; font-size: 1.1rem;">Permanent Deletion</h3>
+                    <p style="color: #b91c1c; margin: 0; font-size: 0.95rem;">
+                        Are you sure you want to delete <strong>@subject.Name</strong>? This action cannot be undone.
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 2rem;">
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Subject Name</label>
+                    <div style="font-size: 1.1rem; font-weight: 600;">@subject.Name</div>
+                </div>
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Subject Code</label>
+                    <div style="font-size: 1.1rem; font-weight: 500;">@(string.IsNullOrEmpty(subject.Code) ? "N/A" : subject.Code)</div>
+                </div>
+            </div>
+
+            <EditForm method="post" Model="subject" OnValidSubmit="DeleteSubject" FormName="delete" Enhance>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <a href="/subjects" class="btn btn-secondary hover-lift">Cancel</a>
+                    <button type="submit" class="btn btn-danger hover-lift" disabled="@(subject is null)">
+                        <i class="fa-solid fa-trash-can"></i> Confirm Delete
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    private Subject? subject;
+    [SupplyParameterFromQuery] private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        subject = await context.Subjects.FirstOrDefaultAsync(m => m.Id == Id);
+        if (subject is null) NavigationManager.NavigateTo("notfound");
+    }
+
+    private async Task DeleteSubject()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Subjects.Remove(subject!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/subjects");
+    }
+}

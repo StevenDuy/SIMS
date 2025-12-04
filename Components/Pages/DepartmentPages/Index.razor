@@ -1,0 +1,55 @@
+﻿@page "/departments"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using SIMS.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+
+<PageTitle>Departments</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Departments</h1>
+            <div style="color: var(--text-muted); margin-top: 5px;">Manage faculties and divisions</div>
+        </div>
+        <div style="display: flex; gap: 2rem; align-items: center;">
+            <div class="stat-text">
+                <i class="fa-solid fa-building"></i>
+                <span>@(context.Departments.Count()) Departments</span>
+            </div>
+            <a href="departments/create" class="btn btn-primary hover-lift">
+                <i class="fa-solid fa-plus"></i> Add New
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-scroll">
+            <QuickGrid Class="table" Items="context.Departments">
+                <PropertyColumn Property="d => d.Name" Sortable="true" Title="Department Name" />
+
+                <TemplateColumn Title="Actions">
+                    <div style="display:flex; gap: 0.75rem;">
+                        <a href="@($"departments/edit?id={context.Id}")" class="btn-icon" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        <a href="@($"departments/details?id={context.Id}")" class="btn-icon" title="Details">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
+                        <a href="@($"departments/delete?id={context.Id}")" class="btn-icon delete" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </a>
+                    </div>
+                </TemplateColumn>
+            </QuickGrid>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationDbContext context = default!;
+    protected override void OnInitialized() => context = DbFactory.CreateDbContext();
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

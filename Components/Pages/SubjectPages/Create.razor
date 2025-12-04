@@ -1,0 +1,58 @@
+﻿@page "/subjects/create"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>New Subject</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Create Subject</h1>
+            <div style="color: var(--text-muted);">Define a new subject in the curriculum</div>
+        </div>
+        <a href="/subjects" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card-modern hover-lift">
+        <EditForm method="post" Model="Subject" OnValidSubmit="AddSubject" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <label class="form-label">Subject Name <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="Subject.Name" class="form-control" placeholder="e.g. Calculus I" />
+                    <ValidationMessage For="() => Subject.Name" class="validation-message" />
+                </div>
+
+                <div class="form-group form-full">
+                    <label class="form-label">Subject Code <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="Subject.Code" class="form-control" placeholder="e.g. MAT101" />
+                    <ValidationMessage For="() => Subject.Code" class="validation-message" />
+                </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                    <i class="fa-solid fa-check-circle"></i> Create Subject
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] private Subject Subject { get; set; } = new();
+
+    private async Task AddSubject()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Subjects.Add(Subject);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/subjects");
+    }
+}

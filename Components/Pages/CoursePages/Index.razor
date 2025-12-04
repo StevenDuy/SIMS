@@ -1,0 +1,72 @@
+﻿@page "/courses"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using SIMS.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+
+<PageTitle>Courses</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Course Manager</h1>
+            <div style="color: var(--text-muted); margin-top: 5px;">Overview of academic curriculum</div>
+        </div>
+
+        <div style="display: flex; gap: 2rem; align-items: center;">
+            <div class="stat-text">
+                <i class="fa-solid fa-cube"></i>
+                <span>@(context.Courses.Count()) Active Courses</span>
+            </div>
+
+            <a href="courses/create" class="btn btn-primary hover-lift">
+                <i class="fa-solid fa-plus"></i> New Course
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-scroll">
+            <QuickGrid Class="table" Items="context.Courses.Include(c => c.Subject).Include(c => c.Semester).Include(c => c.Lecture)">
+                <PropertyColumn Property="c => c.Name" Sortable="true" Title="Course Name" />
+
+                <TemplateColumn Title="Subject" Sortable="true">
+                    <span>@context.Subject?.Name</span>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Semester" Sortable="true">
+                    <span>@context.Semester?.Name</span>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Lecturer" Sortable="true">
+                    <span>@context.Lecture?.Name</span>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Actions">
+                    <div style="display: flex; gap: 0.75rem;">
+                        <a href="@($"courses/edit?id={context.Id}")" class="btn-icon" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        <a href="@($"enrollments/assign-students?courseId={context.Id}")" class="btn-icon" title="Assign">
+                            <i class="fa-solid fa-users-gear"></i>
+                        </a>
+                        <a href="@($"courses/details?id={context.Id}")" class="btn-icon" title="Details">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
+                        <a href="@($"courses/delete?id={context.Id}")" class="btn-icon delete" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </a>
+                    </div>
+                </TemplateColumn>
+            </QuickGrid>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationDbContext context = default!;
+    protected override void OnInitialized() => context = DbFactory.CreateDbContext();
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

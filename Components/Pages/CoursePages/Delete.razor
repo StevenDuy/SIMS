@@ -1,0 +1,75 @@
+﻿@page "/courses/delete"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete Course</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (course is null)
+    {
+        <div style="text-align:center; padding:3rem;">Loading...</div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Delete Course</h1>
+                <div class="header-meta">Confirmation required</div>
+            </div>
+        </div>
+
+        <div class="card-modern" style="border-left: 4px solid var(--danger);">
+
+            <div style="background-color: var(--danger-bg); padding: 1.25rem; border-radius: 8px; display: flex; gap: 1rem; margin-bottom: 2rem; border: 1px solid rgba(239, 68, 68, 0.2);">
+                <div style="color: var(--danger); font-size: 1.5rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 style="color: #991b1b; margin: 0 0 0.25rem 0; font-size: 1.1rem;">Confirm Deletion</h3>
+                    <p style="color: #b91c1c; margin: 0; font-size: 0.95rem;">Are you sure you want to delete the course <strong>@course.Name</strong>? This action cannot be undone.</p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Subject</label>
+                    <div style="font-weight: 500;">@(course.Subject?.Name ?? "N/A")</div>
+                </div>
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Semester</label>
+                    <div style="font-weight: 500;">@(course.Semester?.Name ?? "N/A")</div>
+                </div>
+            </div>
+
+            <EditForm method="post" Model="course" OnValidSubmit="DeleteCourse" FormName="delete" Enhance>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <a href="/courses" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-danger" disabled="@(course is null)">
+                        <i class="fa-solid fa-trash-can"></i> Confirm Delete
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    private Course? course;
+    [SupplyParameterFromQuery] private int Id { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        course = await context.Courses.Include(c => c.Subject).Include(c => c.Semester).Include(c => c.Lecture).FirstOrDefaultAsync(m => m.Id == Id);
+        if (course is null) NavigationManager.NavigateTo("notfound");
+    }
+    private async Task DeleteCourse()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Courses.Remove(course!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/courses");
+    }
+}

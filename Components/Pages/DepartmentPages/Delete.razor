@@ -1,0 +1,77 @@
+﻿@page "/departments/delete"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete Department</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (department is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Delete Department</h1>
+                <div style="color: var(--text-muted);">Confirm deletion</div>
+            </div>
+        </div>
+
+        <div class="card-modern" style="border-left: 4px solid var(--danger);">
+            <div style="background-color: #fee2e2; padding: 1.5rem; border-radius: 12px; display: flex; gap: 1.25rem; margin-bottom: 2rem; border: 1px solid #fecaca;">
+                <div style="color: var(--danger); font-size: 1.75rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 style="color: #991b1b; margin: 0 0 0.5rem 0; font-size: 1.1rem;">Permanent Deletion</h3>
+                    <p style="color: #b91c1c; margin: 0; font-size: 0.95rem;">
+                        Are you sure you want to delete <strong>@department.Name</strong>? This cannot be undone.
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 2rem;">
+                <div>
+                    <label class="form-label" style="color: var(--text-muted);">Department Name</label>
+                    <div style="font-size: 1.1rem; font-weight: 600;">@department.Name</div>
+                </div>
+            </div>
+
+            <EditForm method="post" Model="department" OnValidSubmit="DeleteDepartment" FormName="delete" Enhance>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <a href="/departments" class="btn btn-secondary hover-lift">Cancel</a>
+                    <button type="submit" class="btn btn-danger hover-lift" disabled="@(department is null)">
+                        <i class="fa-solid fa-trash-can"></i> Confirm Delete
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    private Department? department;
+    [SupplyParameterFromQuery] private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        department = await context.Departments.FirstOrDefaultAsync(m => m.Id == Id);
+        if (department is null) NavigationManager.NavigateTo("notfound");
+    }
+
+    private async Task DeleteDepartment()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Departments.Remove(department!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/departments");
+    }
+}

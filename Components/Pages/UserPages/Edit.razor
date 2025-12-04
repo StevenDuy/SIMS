@@ -1,0 +1,115 @@
+@page "/users/edit"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit User</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (User is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Edit User</h1>
+                <div style="color: var(--text-muted);">Update profile for <strong>@User.Email</strong></div>
+            </div>
+            <a href="/users" class="btn btn-secondary hover-lift">
+                <i class="fa-solid fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <div class="card-modern hover-lift">
+            <EditForm Model="User" OnValidSubmit="SaveUser" FormName="edit-user" method="post" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert" class="validation-message" style="margin-bottom:1rem; display:block;" />
+                <input type="hidden" name="User.Id" value="@User.Id" />
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <InputText @bind-Value="User.Name" class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Student ID</label>
+                        <InputText @bind-Value="User.StudentId" class="form-control" />
+                    </div>
+
+                    <div class="form-group col-span-2">
+                        <label class="form-label">Email Address</label>
+                        <InputText @bind-Value="User.Email" class="form-control" />
+                    </div>
+
+                    <div class="form-group col-span-2">
+                        <label class="form-label">System Role</label>
+                        <InputSelect @bind-Value="SelectedRole" name="SelectedRole" class="form-select">
+                            <option value="">-- No Role --</option>
+                            @foreach (var r in Roles)
+                            {
+                                <option value="@r">@r</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string Id { get; set; } = "";
+    [SupplyParameterFromForm] private ApplicationUser? User { get; set; }
+    [SupplyParameterFromForm] private string SelectedRole { get; set; } = "";
+    private List<string> Roles { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Roles = await RoleManager.Roles.Select(r => r.Name!).ToListAsync();
+        if (!string.IsNullOrEmpty(Id) && User is null)
+        {
+            User = await UserManager.FindByIdAsync(Id);
+            if (User is null) { NavigationManager.NavigateTo("notfound"); return; }
+
+            User.UserName = User.Email;
+            var userRoles = await UserManager.GetRolesAsync(User);
+            SelectedRole = userRoles.FirstOrDefault() ?? "";
+        }
+    }
+
+    private async Task SaveUser()
+    {
+        if (User is null) return;
+        var userToUpdate = await UserManager.FindByIdAsync(User.Id);
+        if (userToUpdate is null) { NavigationManager.NavigateTo("/users"); return; }
+
+        userToUpdate.Email = User.Email;
+        userToUpdate.UserName = User.Email;
+        userToUpdate.Name = User.Name;
+        userToUpdate.StudentId = User.StudentId;
+        var updateResult = await UserManager.UpdateAsync(userToUpdate);
+        if (!updateResult.Succeeded) return;
+
+        var currentRoles = await UserManager.GetRolesAsync(userToUpdate);
+        if (currentRoles.Any()) await UserManager.RemoveFromRolesAsync(userToUpdate, currentRoles);
+        if (!string.IsNullOrEmpty(SelectedRole)) await UserManager.AddToRoleAsync(userToUpdate, SelectedRole);
+
+        NavigationManager.NavigateTo("/users");
+    }
+}

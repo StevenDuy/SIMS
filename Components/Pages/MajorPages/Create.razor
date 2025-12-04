@@ -1,0 +1,71 @@
+﻿@page "/majors/create"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>New Major</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Create Major</h1>
+            <div style="color: var(--text-muted);">Define a new field of study</div>
+        </div>
+        <a href="/majors" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card-modern hover-lift">
+        <EditForm method="post" Model="Major" OnValidSubmit="AddMajor" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <label class="form-label">Major Name <span style="color:var(--danger)">*</span></label>
+                    <InputText @bind-Value="Major.Name" class="form-control" placeholder="e.g. Computer Science" />
+                    <ValidationMessage For="() => Major.Name" class="validation-message" />
+                </div>
+
+                <div class="form-group form-full">
+                    <label class="form-label">Department</label>
+                    <InputSelect @bind-Value="Major.DepartmentId" class="form-select">
+                        <option value="0">-- Select Department --</option>
+                        @foreach (var dept in Departments)
+                        {
+                            <option value="@dept.Id">@dept.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Major.DepartmentId" class="validation-message" />
+                </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
+                    <i class="fa-solid fa-check-circle"></i> Create Major
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] private Major Major { get; set; } = new();
+    private List<Department> Departments { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Departments = await context.Departments.ToListAsync();
+    }
+
+    private async Task AddMajor()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Majors.Add(Major);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/majors");
+    }
+}

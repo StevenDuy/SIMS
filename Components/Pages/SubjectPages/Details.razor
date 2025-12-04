@@ -1,0 +1,75 @@
+﻿@page "/subjects/details"
+@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Subject Details</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    @if (subject is null)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Subject Details</h1>
+                <div style="color: var(--text-muted);">Detailed view of <strong>@subject.Name</strong></div>
+            </div>
+            <a href="/subjects" class="btn btn-secondary hover-lift">
+                <i class="fa-solid fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <div class="card-modern">
+            <div style="display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #f1f5f9;">
+                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: var(--primary); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: var(--shadow-sm);">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: var(--text-main);">@subject.Name</h2>
+                    <span style="background: #f1f5f9; padding: 4px 12px; border-radius: 99px; font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                        ID: #@subject.Id
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-full">
+                    <label class="form-label" style="color: var(--text-muted);">Subject Code</label>
+                    <div style="font-size: 1.1rem; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-barcode" style="color: var(--primary);"></i>
+                        @(string.IsNullOrEmpty(subject.Code) ? "N/A" : subject.Code)
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display: flex; gap: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1.5rem;">
+                <a href="@($"/subjects/edit?id={subject.Id}")" class="btn btn-primary hover-lift">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                </a>
+                <a href="@($"/subjects/delete?id={subject.Id}")" class="btn btn-danger hover-lift" style="background: white; color: var(--danger); border: 1px solid var(--danger); box-shadow: none;">
+                    <i class="fa-solid fa-trash-can"></i> Delete
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Subject? subject;
+    [SupplyParameterFromQuery] private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        subject = await context.Subjects.FirstOrDefaultAsync(m => m.Id == Id);
+        if (subject is null) NavigationManager.NavigateTo("notfound");
+    }
+}
