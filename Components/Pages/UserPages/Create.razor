@@ -1,7 +1,10 @@
 ﻿@page "/users/create"
+@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using SIMS.Data
 @inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
 @inject NavigationManager NavigationManager
 
 <PageTitle>Create User</PageTitle>
@@ -19,40 +22,50 @@
     </div>
 
     <div class="card-modern hover-lift">
-        <EditForm Model="User" OnValidSubmit="AddUser" FormName="create">
+        <EditForm Model="Input" OnValidSubmit="CreateUser" FormName="create-user" method="post">
             <DataAnnotationsValidator />
+            <ValidationSummary class="validation-message" role="alert" style="margin-bottom: 1rem;" />
 
             <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <InputText @bind-Value="Input.Email" class="form-control" placeholder="name@example.com" />
+                    <ValidationMessage For="() => Input.Email" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" placeholder="Enter password" />
+                    <ValidationMessage For="() => Input.Password" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <InputText @bind-Value="Input.Name" class="form-control" placeholder="Full Name" />
+                    <ValidationMessage For="() => Input.Name" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Student ID</label>
+                    <InputText @bind-Value="Input.StudentId" class="form-control" placeholder="Student ID" />
+                    <ValidationMessage For="() => Input.StudentId" class="validation-message" />
+                </div>
+
                 <div class="form-group form-full">
-                    <label class="form-label">Full Name <span style="color:var(--danger)">*</span></label>
-                    <InputText @bind-Value="User.Name" class="form-control" placeholder="e.g. Nguyen Van A" />
-                    <ValidationMessage For="() => User.Name" class="validation-message" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Email Address <span style="color:var(--danger)">*</span></label>
-                    <InputText @bind-Value="User.Email" class="form-control" placeholder="user@example.com" />
-                    <ValidationMessage For="() => User.Email" class="validation-message" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Phone Number</label>
-                    <InputText @bind-Value="User.PhoneNumber" class="form-control" placeholder="e.g. 0901234567" />
-                    <ValidationMessage For="() => User.PhoneNumber" class="validation-message" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Default Password</label>
-                    <input type="text" class="form-control" value="Password123!" readonly style="background-color: #f1f5f9; color: var(--text-muted); cursor: not-allowed;" />
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
-                        <i class="fa-solid fa-circle-info"></i> User should change this after first login.
-                    </div>
+                    <label class="form-label">Role</label>
+                    <InputSelect @bind-Value="Input.Role" class="form-select">
+                        <option value="">-- Select Role --</option>
+                        @foreach (var r in Roles)
+                        {
+                            <option value="@r">@r</option>
+                        }
+                    </InputSelect>
                 </div>
             </div>
 
             <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
                 <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
-                    <i class="fa-solid fa-user-plus"></i> Create Account
+                    <i class="fa-solid fa-user-plus"></i> Create User
                 </button>
             </div>
         </EditForm>
@@ -60,24 +73,48 @@
 </div>
 
 @code {
-    [SupplyParameterFromForm] private ApplicationUser User { get; set; } = new();
+    [SupplyParameterFromForm]
+    private CreateInput Input { get; set; } = new();
 
-    private async Task AddUser()
+    private List<string> Roles { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        User.UserName = User.Email;
-        User.EmailConfirmed = true;
-        var result = await UserManager.CreateAsync(User, "Password123!");
+        Roles = await RoleManager.Roles.Select(r => r.Name!).ToListAsync();
+    }
 
-        if (result.Succeeded)
+    private async Task CreateUser()
+    {
+        var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, Name = Input.Name, StudentId = Input.StudentId };
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
         {
-            NavigationManager.NavigateTo("/users");
+            // Xử lý lỗi nếu cần (đã có ValidationSummary)
+            return;
         }
-        else
+
+        if (!string.IsNullOrEmpty(Input.Role))
         {
-            foreach (var error in result.Errors)
-            {
-                Console.WriteLine($"Error: {error.Description}");
-            }
+            await UserManager.AddToRoleAsync(user, Input.Role);
         }
+        NavigationManager.NavigateTo("/users");
+    }
+
+    // Logic gốc: Sử dụng ViewModel riêng để hứng Password
+    private class CreateInput
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        public string Password { get; set; } = "";
+
+        public string Name { get; set; } = "";
+
+        public string StudentId { get; set; } = "";
+
+        public string Role { get; set; } = "";
     }
 }

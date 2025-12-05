@@ -1,9 +1,12 @@
-@page "/enrollments"
+﻿@page "/enrollments"
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.AspNetCore.Authorization
 @using SIMS.Data
+@attribute [Authorize]
 @implements IAsyncDisposable
-@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Enrollments</PageTitle>
 <link rel="stylesheet" href="app.css" />
@@ -11,26 +14,40 @@
 <div class="app-container animate-fade-in">
     <div class="page-header">
         <div class="header-content">
-            <h1>Enrollments</h1>
-            <div style="color: var(--text-muted); margin-top: 5px;">Student registration records</div>
+            <h1>Course Enrollments</h1>
+            <div style="color: var(--text-muted); margin-top: 5px;">Overview of courses and student counts</div>
         </div>
-        <div class="stat-text">
-            <i class="fa-solid fa-clipboard-list"></i>
-            <span>@(context.Enrollments.Count()) Records</span>
-        </div>
+        @if (IsAdmin)
+        {
+            <a href="enrollments/assign-students" class="btn btn-primary hover-lift">
+                <i class="fa-solid fa-plus"></i> Assign Students
+            </a>
+        }
     </div>
 
     <div class="table-container">
         <div class="table-scroll">
-            <QuickGrid Class="table" Items="context.Enrollments.Include(e => e.Course).Include(e => e.Student)">
-                <PropertyColumn Property="e => e.Course.Name" Sortable="true" Title="Course" />
-                <PropertyColumn Property="e => e.Student.Name" Sortable="true" Title="Student Name" />
-                <PropertyColumn Property="e => e.Student.Email" Sortable="true" Title="Email" />
+            <QuickGrid Class="table" Items="CourseEnrollments">
+                <PropertyColumn Title="Course" Property="c => c.Name" Sortable="true" />
+                <PropertyColumn Title="Subject" Property="c => c.Subject.Name" Sortable="true" />
+                <PropertyColumn Title="Semester" Property="c => c.Semester.Name" Sortable="true" />
+                <PropertyColumn Title="Lecturer" Property="c => c.Lecture.Name" Sortable="true" />
+
+                <TemplateColumn Title="Students">
+                    <span class="stat-text" style="font-size: 0.9rem;">
+                        <i class="fa-solid fa-user-group" style="margin-right: 5px;"></i> @context.StudentCount
+                    </span>
+                </TemplateColumn>
 
                 <TemplateColumn Title="Actions">
-                    <a href="@($"enrollments/delete?id={context.Id}")" class="btn-icon delete" title="Delete Enrollment">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </a>
+                    @if (IsAdmin)
+                    {
+                        <div style="display:flex; gap: 0.75rem;">
+                            <a href="@($"enrollments/assign-students?courseId={context.Id}")" class="btn-icon" title="Assign Students">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </a>
+                        </div>
+                    }
                 </TemplateColumn>
             </QuickGrid>
         </div>
@@ -39,6 +56,52 @@
 
 @code {
     private ApplicationDbContext context = default!;
-    protected override void OnInitialized() => context = DbFactory.CreateDbContext();
+    private IQueryable<CourseEnrollmentViewModel> CourseEnrollments = default!;
+    private bool IsAdmin = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+
+        // Check role
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        IsAdmin = authState.User.IsInRole("Admin");
+
+        var courses = await context.Courses
+            .Include(c => c.Subject)
+            .Include(c => c.Semester)
+            .Include(c => c.Lecture)
+            .ToListAsync();
+
+        // Logic gốc: Tính toán số lượng enrollment cho từng course
+        var enrollmentCounts = await context.Enrollments
+            .GroupBy(e => e.CourseId)
+            .Select(g => new { CourseId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CourseId, x => x.Count);
+
+        var courseList = courses.Select(c => new CourseEnrollmentViewModel
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Subject = c.Subject,
+            Semester = c.Semester,
+            Lecture = c.Lecture,
+            StudentCount = enrollmentCounts.ContainsKey(c.Id) ? enrollmentCounts[c.Id] : 0
+        }).ToList();
+
+        CourseEnrollments = courseList.AsQueryable();
+    }
+
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+    // ViewModel gốc
+    public class CourseEnrollmentViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public Subject Subject { get; set; } = null!;
+        public Semester Semester { get; set; } = null!;
+        public ApplicationUser Lecture { get; set; } = null!;
+        public int StudentCount { get; set; }
+    }
 }

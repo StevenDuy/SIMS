@@ -1,8 +1,14 @@
 ﻿@page "/enrollments/assign-students"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
 @using SIMS.Data
-@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Assign Students</PageTitle>
 <link rel="stylesheet" href="app.css" />
@@ -11,105 +17,219 @@
     <div class="page-header">
         <div class="header-content">
             <h1>Assign Students</h1>
-            <div style="color: var(--text-muted);">Enrolling students into <strong>@(Course?.Name ?? "Course")</strong></div>
+            <div style="color: var(--text-muted);">Enroll students into courses</div>
         </div>
-        <a href="/courses" class="btn btn-secondary hover-lift">
-            <i class="fa-solid fa-arrow-left"></i> Back to Courses
+        <a href="/enrollments" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
         </a>
     </div>
 
     <div class="card-modern hover-lift">
-        @if (Course == null)
-        {
-            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                <i class="fa-solid fa-circle-notch fa-spin"></i> Loading course data...
-            </div>
-        }
-        else
-        {
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="margin: 0 0 0.5rem 0; color: var(--primary);">@Course.Name</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Check the box to enroll a student. Uncheck to remove them.</p>
+        <EditForm Model="Model" OnValidSubmit="AssignStudent" FormName="assign" data-enhance="false">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-message" role="alert" />
+
+            <div class="form-grid">
+                <div class="form-group form-full">
+                    <label for="courseId" class="form-label">Course</label>
+                    <InputSelect id="courseId" @bind-Value="Model.CourseId" @bind-Value:after="OnCourseChangedAsync" class="form-select">
+                        <option value="0">-- Select Course --</option>
+                        @foreach (var course in Courses)
+                        {
+                            <option value="@course.Id">@course.Name (@course.Subject.Name - @course.Semester.Name)</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Model.CourseId" class="validation-message" />
+                </div>
+
+                <div class="form-group form-full">
+                    <label for="studentIds" class="form-label">Search Students</label>
+                    <select id="studentIds" class="form-control" multiple style="width: 100%;"></select>
+                    <small style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem; display: block;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Search and select students...
+                    </small>
+                </div>
             </div>
 
-            <EditForm Model="SelectedStudentIds" OnValidSubmit="SaveEnrollments" FormName="assign">
-                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
-                    @foreach (var student in AllStudents)
+            @if (SelectedCourseId > 0)
+            {
+                <div style="margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
+                    <h5 style="margin-bottom: 1rem; color: var(--primary);">Currently Enrolled Students</h5>
+
+                    @if (EnrolledStudents.Any())
                     {
-                        <div style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #e2e8f0; background: #fff; transition: background 0.2s;">
-                            <input type="checkbox" style="width: 20px; height: 20px; margin-right: 1rem; cursor: pointer; accent-color: var(--primary);"
-                                   checked="@(SelectedStudentIds.Contains(student.Id))"
-                                   @onchange="@(e => ToggleSelection(student.Id, e.Value))" />
-
-                            <div>
-                                <div style="font-weight: 600; color: var(--text-main);">@student.Name</div>
-                                <div style="font-size: 0.85rem; color: var(--text-muted);">@student.Email</div>
-                            </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            @foreach (var student in EnrolledStudents)
+                            {
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                    <div>
+                                        <strong>@student.Student.Name</strong>
+                                        <span style="color: var(--text-muted);">(@student.Student.StudentId) - @student.Student.Email</span>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveEnrollment(student.Id)">
+                                        <i class="fa-solid fa-trash"></i> Remove
+                                    </button>
+                                </div>
+                            }
                         </div>
                     }
+                    else
+                    {
+                        <p style="color: var(--text-muted); font-style: italic;">No students enrolled in this course yet.</p>
+                    }
                 </div>
+            }
 
-                <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
-                    <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
-                        <i class="fa-solid fa-floppy-disk"></i> Save Enrollments
-                    </button>
-                </div>
-            </EditForm>
-        }
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;" disabled="@(SelectedCourseId == 0)">
+                    <i class="fa-solid fa-check-circle"></i> Assign Students
+                </button>
+            </div>
+        </EditForm>
     </div>
 </div>
 
 @code {
-    [SupplyParameterFromQuery] public int CourseId { get; set; }
-    private Course? Course;
-    private List<ApplicationUser> AllStudents = new();
-    private HashSet<string> SelectedStudentIds = new();
+    [SupplyParameterFromForm] private AssignModel Model { get; set; } = new();
+    [SupplyParameterFromQuery] private int? CourseId { get; set; }
+
+    private List<Course> Courses { get; set; } = new();
+    private List<Enrollment> EnrolledStudents { get; set; } = new();
+    private int SelectedCourseId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        Course = await context.Courses.FirstOrDefaultAsync(c => c.Id == CourseId);
-        AllStudents = await context.Users.ToListAsync();
-
-        var existingEnrollments = await context.Enrollments
-            .Where(e => e.CourseId == CourseId)
-            .Select(e => e.StudentId)
+        Courses = await context.Courses
+            .Include(c => c.Subject)
+            .Include(c => c.Semester)
+            .AsNoTracking()
             .ToListAsync();
 
-        foreach (var id in existingEnrollments) SelectedStudentIds.Add(id);
+        if (CourseId.HasValue && CourseId.Value > 0)
+        {
+            SelectedCourseId = CourseId.Value;
+            Model.CourseId = CourseId.Value;
+            await LoadEnrolledStudents(CourseId.Value);
+        }
     }
 
-    private void ToggleSelection(string studentId, object? checkedValue)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (checkedValue is bool isChecked && isChecked)
-            SelectedStudentIds.Add(studentId);
+        if (firstRender)
+        {
+            await InitializeSelect2();
+        }
         else
-            SelectedStudentIds.Remove(studentId);
+        {
+            try
+            {
+                // Kiểm tra element tồn tại để re-init nếu cần (Logic gốc)
+                var elementExists = await JSRuntime.InvokeAsync<bool>("eval", "$('#studentIds').length > 0 && !$('#studentIds').hasClass('select2-hidden-accessible')");
+                if (elementExists)
+                {
+                    await InitializeSelect2();
+                }
+            }
+            catch { }
+        }
     }
 
-    private async Task SaveEnrollments()
+    private async Task InitializeSelect2()
+    {
+        await Task.Delay(500);
+        try
+        {
+            // Gọi hàm initStudentSelect2 trong App.razor (Logic gốc)
+            await JSRuntime.InvokeVoidAsync("initStudentSelect2");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing Select2: {ex.Message}");
+        }
+    }
+
+    private async Task OnCourseChangedAsync()
+    {
+        if (Model.CourseId > 0)
+        {
+            SelectedCourseId = Model.CourseId;
+            await LoadEnrolledStudents(Model.CourseId);
+
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("clearStudentSelect2");
+            }
+            catch { }
+        }
+    }
+
+    private async Task LoadEnrolledStudents(int courseId)
     {
         using var context = DbFactory.CreateDbContext();
-        // Remove unselected
-        var toRemove = await context.Enrollments
-            .Where(e => e.CourseId == CourseId && !SelectedStudentIds.Contains(e.StudentId))
+        EnrolledStudents = await context.Enrollments
+            .Include(e => e.Student)
+            .Where(e => e.CourseId == courseId)
             .ToListAsync();
-        context.Enrollments.RemoveRange(toRemove);
+    }
 
-        // Add new
-        var existingIds = await context.Enrollments
-            .Where(e => e.CourseId == CourseId)
-            .Select(e => e.StudentId)
-            .ToListAsync();
-        foreach (var id in SelectedStudentIds)
+    private async Task AssignStudent()
+    {
+        if (SelectedCourseId == 0) return;
+        try
         {
-            if (!existingIds.Contains(id))
+            // Lấy danh sách ID đã chọn từ Select2 qua JS (Logic gốc)
+            var selectedStudentIds = await JSRuntime.InvokeAsync<string[]>("getSelectedStudents");
+
+            if (selectedStudentIds == null || selectedStudentIds.Length == 0) return;
+
+            using var context = DbFactory.CreateDbContext();
+
+            // Logic kiểm tra trùng và thêm mới
+            var existingEnrollments = await context.Enrollments
+                .Where(e => e.CourseId == SelectedCourseId && selectedStudentIds.Contains(e.StudentId))
+                .Select(e => e.StudentId)
+                .ToListAsync();
+
+            var newStudentIds = selectedStudentIds.Except(existingEnrollments).ToList();
+
+            foreach (var studentId in newStudentIds)
             {
-                context.Enrollments.Add(new Enrollment { CourseId = CourseId, StudentId = id });
+                context.Enrollments.Add(new Enrollment
+                {
+                    StudentId = studentId,
+                    CourseId = SelectedCourseId
+                });
             }
+
+            await context.SaveChangesAsync();
+            await LoadEnrolledStudents(SelectedCourseId);
+
+            await JSRuntime.InvokeVoidAsync("clearStudentSelect2");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error assigning students: {ex.Message}");
         }
 
-        await context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/courses");
+        StateHasChanged();
+    }
+
+    private async Task RemoveEnrollment(int enrollmentId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        var enrollment = await context.Enrollments.FindAsync(enrollmentId);
+        if (enrollment != null)
+        {
+            context.Enrollments.Remove(enrollment);
+            await context.SaveChangesAsync();
+            await LoadEnrolledStudents(SelectedCourseId);
+            StateHasChanged();
+        }
+    }
+
+    private sealed class AssignModel
+    {
+        public int CourseId { get; set; }
     }
 }
