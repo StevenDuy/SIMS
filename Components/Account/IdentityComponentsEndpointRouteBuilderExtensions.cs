@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -46,7 +46,11 @@ namespace Microsoft.AspNetCore.Routing
                 [FromForm] string returnUrl) =>
             {
                 await signInManager.SignOutAsync();
-                return TypedResults.LocalRedirect($"~/{returnUrl}");
+
+                // --- SỬA ĐỔI TẠI ĐÂY ---
+                // Cũ: return TypedResults.LocalRedirect($"~/{returnUrl}");
+                // Mới: Luôn chuyển về trang chủ (dấu ~ là root của ứng dụng)
+                return TypedResults.LocalRedirect("~/");
             });
 
             var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();

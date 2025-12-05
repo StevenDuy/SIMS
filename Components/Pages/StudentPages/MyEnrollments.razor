@@ -1,0 +1,101 @@
+@page "/my-enrollments"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using SIMS.Data
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Student")]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>My Enrollments</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>My Enrollments</h1>
+            <div style="color: var(--text-muted);">Your learning progress</div>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div style="text-align: center; padding: 4rem;">Loading...</div>
+    }
+    else if (!Enrollments.Any())
+    {
+        <div class="card-modern" style="text-align: center; padding: 3rem;">
+            <p>You are not enrolled in any courses.</p>
+        </div>
+    }
+    else
+    {
+        <div class="course-grid-layout">
+            @foreach (var enrollment in Enrollments)
+            {
+                <div class="course-card-item type-student">
+                    <div class="course-card-top"></div>
+
+                    <div class="course-card-body">
+                        <div class="course-card-header">
+                            <div class="course-icon">
+                                <i class="fa-solid fa-book-bookmark"></i>
+                            </div>
+                            <span class="course-tag">@enrollment.Course.Semester.Name</span>
+                        </div>
+
+                        <h3 class="course-name">@enrollment.Course.Name</h3>
+
+                        <div class="course-sub-info">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>@enrollment.Course.Subject.Name</span>
+                        </div>
+
+                        <div class="course-stats" style="color: #64748b; font-weight: 400;">
+                            <i class="fa-solid fa-chalkboard-user" style="color: #059669;"></i>
+                            <span>Lecturer: <strong>@enrollment.Course.Lecture.Name</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="course-card-footer">
+                        <div class="course-link" style="cursor: default;">
+                            <span>Status</span>
+                            <span style="background:#ecfdf5; color:#059669; padding:2px 8px; border-radius:4px; font-size:0.8rem;">
+                                <i class="fa-solid fa-check"></i> Enrolled
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Enrollment> Enrollments { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                using var context = DbFactory.CreateDbContext();
+                Enrollments = await context.Enrollments
+                    .Include(e => e.Course).ThenInclude(c => c.Subject)
+                    .Include(e => e.Course).ThenInclude(c => c.Semester)
+                    .Include(e => e.Course).ThenInclude(c => c.Lecture)
+                    .Where(e => e.StudentId == currentUser.Id)
+                    .OrderBy(e => e.Course.Semester.Name).ThenBy(e => e.Course.Name)
+                    .AsNoTracking().ToListAsync();
+            }
+        }
+        IsLoading = false;
+    }
+}

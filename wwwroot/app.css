@@ -281,3 +281,156 @@ tbody tr:hover td {
     display: block;
 }
 
+/* =========================================
+   Lecture va Student (Dùng chung)
+   ========================================= */
+
+/* 1. Layout Lưới (Grid) - Đảm bảo khoảng cách đều */
+.course-grid-layout {
+    display: grid;
+    /* Tự động chia cột, tối thiểu 300px, tự giãn */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem; /* Khoảng cách giữa các thẻ (ngang & dọc) */
+    margin-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+/* 2. Card Cơ bản */
+.course-card-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Để các thẻ cao bằng nhau */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+    /* Hiệu ứng Hover: Nổi lên & Bóng đổ */
+    .course-card-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: transparent;
+    }
+
+/* 3. Dải màu trang trí trên đầu (Top Bar) */
+.course-card-top {
+    height: 6px;
+    width: 100%;
+}
+
+/* Modifier: Màu cho Giảng viên (Tím) */
+.course-card-item.type-lecturer .course-card-top {
+    background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
+}
+
+.course-card-item.type-lecturer .course-icon {
+    background-color: #e0e7ff;
+    color: #4338ca;
+}
+
+/* Modifier: Màu cho Sinh viên (Xanh lá) */
+.course-card-item.type-student .course-card-top {
+    background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+}
+
+.course-card-item.type-student .course-icon {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+
+/* 4. Nội dung bên trong thẻ */
+.course-card-body {
+    padding: 1.5rem;
+    flex: 1; /* Đẩy footer xuống đáy */
+    display: flex;
+    flex-direction: column;
+}
+
+.course-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.course-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.course-tag {
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.course-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+}
+
+.course-sub-info {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.course-stats {
+    margin-top: auto; /* Đẩy xuống sát footer */
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 5. Footer (Nút hành động) */
+.course-card-footer {
+    background: #f8fafc;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.course-link {
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+}
+
+/* Link màu theo theme */
+.type-lecturer .course-link {
+    color: #4f46e5;
+}
+
+.type-student .course-link {
+    color: #059669;
+}
+
+.course-link:hover {
+    opacity: 0.8;
+}

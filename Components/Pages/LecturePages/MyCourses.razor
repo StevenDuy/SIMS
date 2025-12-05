@@ -1,0 +1,105 @@
+@page "/my-courses"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using SIMS.Data
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Lecture")]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>My Courses</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Teaching Schedule</h1>
+            <div style="color: var(--text-muted);">Manage your classes</div>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div style="text-align: center; padding: 4rem;">Loading...</div>
+    }
+    else if (!Courses.Any())
+    {
+        <div class="card-modern" style="text-align: center; padding: 3rem;">
+            <p>No courses assigned.</p>
+        </div>
+    }
+    else
+    {
+        <div class="course-grid-layout">
+            @foreach (var course in Courses)
+            {
+                <div class="course-card-item type-lecturer">
+                    <div class="course-card-top"></div>
+
+                    <div class="course-card-body">
+                        <div class="course-card-header">
+                            <div class="course-icon">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                            </div>
+                            <span class="course-tag">@course.Semester.Name</span>
+                        </div>
+
+                        <h3 class="course-name">@course.Name</h3>
+
+                        <div class="course-sub-info">
+                            <i class="fa-solid fa-book-open"></i>
+                            <span>@course.Subject.Name</span>
+                        </div>
+
+                        <div class="course-stats" style="color: #4f46e5;">
+                            <i class="fa-solid fa-user-graduate"></i>
+                            <span>@CourseEnrollmentCounts[course.Id] Enrolled</span>
+                        </div>
+                    </div>
+
+                    <div class="course-card-footer">
+                        <a href="@($"enrollments/assign-students?courseId={course.Id}")" class="course-link">
+                            <span>Manage Students</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Course> Courses { get; set; } = new();
+    private Dictionary<int, int> CourseEnrollmentCounts { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                using var context = DbFactory.CreateDbContext();
+                Courses = await context.Courses
+                    .Include(c => c.Subject)
+                    .Include(c => c.Semester)
+                    .Where(c => c.LectureId == currentUser.Id)
+                    .OrderBy(c => c.Semester.Name).ThenBy(c => c.Name)
+                    .AsNoTracking().ToListAsync();
+
+                foreach (var course in Courses)
+                {
+                    var count = await context.Enrollments.Where(e => e.CourseId == course.Id).CountAsync();
+                    CourseEnrollmentCounts[course.Id] = count;
+                }
+            }
+        }
+        IsLoading = false;
+    }
+}
