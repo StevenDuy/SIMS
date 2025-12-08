@@ -1,0 +1,244 @@
+﻿@page "/admin/grading"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@using ClosedXML.Excel
+@using System.IO
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject IJSRuntime JS
+
+<PageTitle>Grading Management</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Grading Management</h1>
+            <div style="color: var(--text-muted);">Master grading input for all courses</div>
+        </div>
+    </div>
+
+    <div class="card-modern" style="margin-bottom: 2rem;">
+        <div class="form-group">
+            <label class="form-label">Select Course</label>
+            <InputSelect Value="SelectedCourseId" ValueExpression="@(() => SelectedCourseId)" ValueChanged="@((int id) => LoadEnrollments(id))" class="form-select">
+                <option value="0">-- Select a Course to Grade --</option>
+                @foreach (var c in AvailableCourses)
+                {
+                    <option value="@c.Id">@c.Name - @(c.Lecture?.Name ?? "No Lecturer") (@c.Semester?.Name)</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+
+    @if (SelectedCourseId > 0)
+    {
+        <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary hover-lift" @onclick="DownloadTemplate" disabled="@(!Enrollments.Any())">
+                <i class="fa-solid fa-file-export"></i> Download Template
+            </button>
+
+            <div style="position: relative; overflow: hidden; display: inline-block;">
+                <label class="btn btn-primary hover-lift" style="cursor: pointer; margin: 0;">
+                    <i class="fa-solid fa-file-import"></i> Import Excel
+                    <InputFile OnChange="ImportGrades" style="position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;" accept=".xlsx" />
+                </label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <div class="alert @(IsError ? "alert-danger" : "alert-success") animate-fade-in" style="margin-bottom: 1rem; border-radius: 12px;">
+                <i class="@(IsError ? "fa-solid fa-triangle-exclamation" : "fa-solid fa-check-circle")"></i> @Message
+            </div>
+        }
+
+        <div class="table-container animate-fade-in">
+            @if (Enrollments.Any())
+            {
+                <EditForm Model="Enrollments" OnValidSubmit="SaveGrades">
+                    <DataAnnotationsValidator />
+
+                    <div style="padding: 1.5rem; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin:0; color: var(--primary);">
+                            <i class="fa-solid fa-users"></i> Student List (@Enrollments.Count)
+                        </h4>
+                        <button type="submit" class="btn btn-primary hover-lift">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Grades
+                        </button>
+                    </div>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Student ID</th>
+                                <th>Email</th>
+                                <th style="width: 200px;">Score (0-10)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Enrollments)
+                            {
+                                <tr>
+                                    <td><strong>@item.Student.Name</strong></td>
+                                    <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem;">@item.Student.StudentId</span></td>
+                                    <td style="color: var(--text-muted);">@item.Student.Email</td>
+                                    <td>
+                                        <InputNumber @bind-Value="item.Score" class="form-control" min="0" max="10" step="0.1" />
+                                        <ValidationMessage For="@(() => item.Score)" class="validation-message" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </EditForm>
+            }
+            else
+            {
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <p>No students enrolled in this course.</p>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Course> AvailableCourses { get; set; } = new();
+    private List<Enrollment> Enrollments { get; set; } = new();
+    private int SelectedCourseId { get; set; }
+    private string Message { get; set; } = "";
+    private bool IsError { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        AvailableCourses = await context.Courses
+            .Include(c => c.Subject)
+            .Include(c => c.Semester)
+            .Include(c => c.Lecture)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    private async Task LoadEnrollments(int courseId)
+    {
+        SelectedCourseId = courseId;
+        Message = "";
+        if (courseId > 0)
+        {
+            using var context = DbFactory.CreateDbContext();
+            Enrollments = await context.Enrollments
+                .Include(e => e.Student)
+                .Where(e => e.CourseId == courseId)
+                .ToListAsync();
+        }
+        else Enrollments.Clear();
+    }
+
+    // --- LOGIC EXCEL ---
+    private async Task DownloadTemplate()
+    {
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Grades");
+            worksheet.Cell(1, 1).Value = "StudentID";
+            worksheet.Cell(1, 2).Value = "StudentName";
+            worksheet.Cell(1, 3).Value = "Score";
+            worksheet.Range("A1:C1").Style.Font.Bold = true;
+
+            for (int i = 0; i < Enrollments.Count; i++)
+            {
+                var student = Enrollments[i];
+                worksheet.Cell(i + 2, 1).Value = student.Student.StudentId;
+                worksheet.Cell(i + 2, 2).Value = student.Student.Name;
+                worksheet.Cell(i + 2, 3).Value = student.Score;
+            }
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var fileName = $"Grades_Course_{SelectedCourseId}.xlsx";
+            using var streamRef = new DotNetStreamReference(new MemoryStream(stream.ToArray()));
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch (Exception ex) { IsError = true; Message = "Error: " + ex.Message; }
+    }
+
+    private async Task ImportGrades(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            using var stream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 1024 * 1024).CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheet(1);
+            var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
+
+            int successCount = 0;
+            int errorCount = 0;
+
+            foreach (var row in rows)
+            {
+                var studentId = row.Cell(1).GetString();
+                var scoreCell = row.Cell(3);
+
+                if (string.IsNullOrWhiteSpace(studentId) || scoreCell.IsEmpty()) continue;
+
+                var enrollment = Enrollments.FirstOrDefault(x => x.Student.StudentId == studentId);
+                if (enrollment != null)
+                {
+                    // CHECK LỖI: Kiểm tra số hợp lệ và nằm trong khoảng 0-10
+                    if (double.TryParse(scoreCell.GetString(), out double score))
+                    {
+                        if (score >= 0 && score <= 10)
+                        {
+                            enrollment.Score = score;
+                            successCount++;
+                        }
+                        else
+                        {
+                            errorCount++; // Điểm ngoài khoảng 0-10
+                        }
+                    }
+                    else
+                    {
+                        errorCount++; // Không phải số
+                    }
+                }
+            }
+
+            if (errorCount > 0)
+            {
+                IsError = true;
+                Message = $"Imported {successCount} students. Skipped {errorCount} invalid scores (must be 0-10).";
+            }
+            else
+            {
+                IsError = false;
+                Message = $"Successfully imported scores for {successCount} students.";
+            }
+        }
+        catch (Exception ex) { IsError = true; Message = "Import Error: " + ex.Message; }
+    }
+
+    private async Task SaveGrades()
+    {
+        using var context = DbFactory.CreateDbContext();
+        foreach (var item in Enrollments)
+        {
+            context.Enrollments.Attach(item);
+            context.Entry(item).Property(x => x.Score).IsModified = true;
+        }
+        await context.SaveChangesAsync();
+        IsError = false;
+        Message = "Grades saved successfully!";
+    }
+}
