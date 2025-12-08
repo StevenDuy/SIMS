@@ -11,27 +11,151 @@
 
 <PageTitle>Profile</PageTitle>
 
-<h3>Profile</h3>
 <StatusMessage />
 
-<div class="row">
-    <div class="col-md-6">
+<div class="profile-compact-wrapper">
+    <div class="profile-left-col">
+        <div class="profile-avatar-box">
+            <i class="fa-solid fa-user"></i>
+        </div>
+        <h3 class="profile-name-text">@username</h3>
+        <span class="profile-role-tag">Student</span>
+    </div>
+
+    <div class="profile-right-col">
         <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <input type="text" value="@username" class="form-control" placeholder="Please choose your username." disabled />
-                <label for="username" class="form-label">Username</label>
+            <ValidationSummary class="validation-message" role="alert" style="margin-bottom: 1rem;" />
+
+            <div class="form-group mb-3">
+                <label class="form-label-sm">Username</label>
+                <div style="position: relative;">
+                    <input type="text" value="@username" class="form-control form-control-sm" disabled style="background-color: #f8fafc; padding-left: 2rem;" />
+                    <i class="fa-solid fa-at icon-sm" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                </div>
             </div>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number." />
-                <label for="phone-number" class="form-label">Phone number</label>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+
+            <div class="form-group mb-4">
+                <label class="form-label-sm">Phone Number</label>
+                <div style="position: relative;">
+                    <InputText @bind-Value="Input.PhoneNumber" class="form-control form-control-sm" placeholder="Phone number" style="padding-left: 2rem;" />
+                    <i class="fa-solid fa-phone icon-sm" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                </div>
+                <ValidationMessage For="() => Input.PhoneNumber" class="validation-message" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+
+            <button type="submit" class="btn btn-primary hover-lift btn-sm-custom" style="width: 100%;">
+                Save Changes
+            </button>
         </EditForm>
     </div>
 </div>
+
+<style>
+    /* Bố cục chia đôi: Trái (Avatar) - Phải (Form) */
+    .profile-compact-wrapper {
+        display: grid;
+        grid-template-columns: 200px 1fr; /* Cột trái 200px, Cột phải tự giãn */
+        gap: 2rem;
+        align-items: center; /* Căn giữa theo chiều dọc */
+        height: 100%; /* Chiếm toàn bộ chiều cao thẻ cha */
+        padding-top: 1rem;
+    }
+
+    /* Cột trái */
+    .profile-left-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        border-right: 1px solid #f1f5f9; /* Đường kẻ ngăn cách */
+        padding-right: 2rem;
+        height: 100%;
+        justify-content: center;
+    }
+
+    .profile-avatar-box {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .profile-name-text {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        word-break: break-word; /* Xuống dòng nếu tên quá dài */
+    }
+
+    .profile-role-tag {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        background: #f1f5f9;
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
+
+    /* Cột phải */
+    .profile-right-col {
+        max-width: 400px; /* Giới hạn chiều rộng form để đẹp hơn */
+    }
+
+    /* Tinh chỉnh form nhỏ gọn */
+    .form-label-sm {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        display: block;
+        color: var(--text-main);
+    }
+
+    .form-control-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        height: 40px; /* Cố định chiều cao input */
+    }
+
+    .icon-sm {
+        font-size: 0.8rem;
+    }
+
+    .btn-sm-custom {
+        padding: 0.6rem;
+        font-size: 0.95rem;
+    }
+
+    /* Responsive: Trên mobile thì quay về xếp dọc */
+    @@media (max-width: 768px) {
+        .profile-compact-wrapper {
+            grid-template-columns: 1fr;
+            text-align: center;
+            padding-top: 0;
+        }
+
+        .profile-left-col {
+            border-right: none;
+            border-bottom: 1px solid #f1f5f9;
+            padding-right: 0;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            height: auto;
+        }
+
+        .profile-right-col {
+            margin: 0 auto;
+            width: 100%;
+        }
+    }
+</style>
 
 @code {
     private ApplicationUser user = default!;
