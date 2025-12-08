@@ -1,17 +1,69 @@
 ﻿@inherits LayoutComponentBase
 @layout AccountLayout
 
-<h1>Manage your account</h1>
+<link rel="stylesheet" href="app.css" />
 
-<div>
-    <h2>Change your account settings</h2>
-    <hr />
-    <div class="row">
-        <div class="col-md-3">
+<div class="app-container animate-fade-in" style="margin-top: 0; padding-top: 20px; max-width: 1000px;">
+
+    <div class="page-header" style="margin-bottom: 1rem;">
+        <div class="header-content">
+            <h1>Account Settings</h1>
+            <div style="color: var(--text-muted); font-size: 0.9rem;">Manage your personal information</div>
+        </div>
+    </div>
+
+    <div class="manage-grid">
+        <div>
             <ManageNavMenu />
         </div>
-        <div class="col-md-9">
+
+        <div class="card-modern manage-content-card">
             @Body
         </div>
     </div>
 </div>
+
+<style>
+    .manage-grid {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .manage-content-card {
+        /* [CỐ ĐỊNH] Chiều cao fixed, đủ để chứa nội dung compact mà không thừa */
+        height: 520px;
+        /* Chỉ hiện scroll nếu nội dung lỡ bị tràn (nhưng ta sẽ làm nội dung nhỏ lại để không tràn) */
+        overflow-y: auto;
+        padding: 2rem;
+        display: block;
+        position: relative;
+    }
+
+        /* Ẩn thanh cuộn nếu không cần thiết (tùy chọn thẩm mỹ) */
+        .manage-content-card::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .manage-content-card::-webkit-scrollbar-thumb {
+            background-color: #e2e8f0;
+            border-radius: 4px;
+        }
+
+    @@media (max-width: 768px) {
+        .manage-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .manage-content-card {
+            height: auto;
+            min-height: 400px;
+        }
+    }
+
+    .settings-container {
+        width: 100%;
+        margin: 0;
+    }
+</style>

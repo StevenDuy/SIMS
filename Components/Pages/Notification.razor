@@ -1,7 +1,152 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Welcome to SIMS</PageTitle>
+<link rel="stylesheet" href="app.css" />
 
-<h1>Hello, world!</h1>
+<div class="app-container animate-fade-in">
+    <AuthorizeView>
+        <Authorized>
+            <div class="page-header">
+                <div class="header-content">
+                    <h1 style="margin-bottom: 0.5rem;">
+                        Welcome back, <span style="color: var(--primary);">@context.User.Identity?.Name</span>! 👋
+                    </h1>
+                    <div style="color: var(--text-muted);">Here's what's happening with your academic life today.</div>
+                </div>
+                <div class="stat-text">
+                    <i class="fa-regular fa-calendar"></i>
+                    <span>@DateTime.Now.ToString("dddd, MMM dd, yyyy")</span>
+                </div>
+            </div>
 
-Welcome to your new app.
+            <div class="courses-grid" style="margin-bottom: 3rem;">
+                <div class="card-modern hover-lift course-card">
+                    <div class="course-card-top" style="background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                    <div class="course-card-body" style="align-items: center; text-align: center;">
+                        <div class="course-icon" style="width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; color: #3b82f6; font-size: 1.75rem; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-user-circle"></i>
+                        </div>
+                        <h3 class="course-name">My Profile</h3>
+                        <div class="course-sub-info">Manage your personal info</div>
+                        <div class="course-card-footer" style="width: 100%; margin-top: auto;">
+                            <a href="Account/Manage" class="course-link" style="justify-content: center;">Go to Profile</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-modern hover-lift course-card">
+                    <div class="course-card-top" style="background: linear-gradient(90deg, #8b5cf6, #d946ef);"></div>
+                    <div class="course-card-body" style="align-items: center; text-align: center;">
+                        <AuthorizeView Roles="Student" Context="studentContext">
+                            <div class="course-icon" style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #9333ea; font-size: 1.75rem; margin-bottom: 1rem;">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <h3 class="course-name">My Learning</h3>
+                            <div class="course-sub-info">Check your enrollments</div>
+                            <div class="course-card-footer" style="width: 100%; margin-top: auto;">
+                                <a href="my-enrollments" class="course-link" style="justify-content: center; color: #9333ea;">View Courses</a>
+                            </div>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="Lecture" Context="lectureContext">
+                            <div class="course-icon" style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #9333ea; font-size: 1.75rem; margin-bottom: 1rem;">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                            </div>
+                            <h3 class="course-name">My Teaching</h3>
+                            <div class="course-sub-info">Manage your classes</div>
+                            <div class="course-card-footer" style="width: 100%; margin-top: auto;">
+                                <a href="my-courses" class="course-link" style="justify-content: center; color: #9333ea;">View Classes</a>
+                            </div>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="Admin" Context="adminContext">
+                            <div class="course-icon" style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #9333ea; font-size: 1.75rem; margin-bottom: 1rem;">
+                                <i class="fa-solid fa-user-shield"></i>
+                            </div>
+                            <h3 class="course-name">System Admin</h3>
+                            <div class="course-sub-info">Manage users & data</div>
+                            <div class="course-card-footer" style="width: 100%; margin-top: auto;">
+                                <a href="users" class="course-link" style="justify-content: center; color: #9333ea;">Manage Users</a>
+                            </div>
+                        </AuthorizeView>
+                    </div>
+                </div>
+
+                <div class="card-modern hover-lift course-card">
+                    <div class="course-card-top" style="background: linear-gradient(90deg, #10b981, #14b8a6);"></div>
+                    <div class="course-card-body" style="align-items: center; text-align: center;">
+                        <div class="course-icon" style="width: 64px; height: 64px; border-radius: 50%; background: #ecfdf5; color: #059669; font-size: 1.75rem; margin-bottom: 1rem;">
+                            <i class="fa-regular fa-calendar-check"></i>
+                        </div>
+                        <h3 class="course-name">Timetable</h3>
+                        <div class="course-sub-info">Check your schedule</div>
+                        <div class="course-card-footer" style="width: 100%; margin-top: auto;">
+                            <AuthorizeView Roles="Student" Context="sCtx"><a href="my-schedule" class="course-link" style="justify-content: center; color: #059669;">View Schedule</a></AuthorizeView>
+                            <AuthorizeView Roles="Lecture" Context="lCtx"><a href="teaching-schedule" class="course-link" style="justify-content: center; color: #059669;">View Schedule</a></AuthorizeView>
+                            <AuthorizeView Roles="Admin" Context="aCtx"><a href="schedules" class="course-link" style="justify-content: center; color: #059669;">Manage Schedules</a></AuthorizeView>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+
+        <NotAuthorized>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; position: relative; overflow: hidden;">
+
+                <div style="position: absolute; top: -10%; left: -10%; width: 300px; height: 300px; background: rgba(99, 102, 241, 0.1); border-radius: 50%; filter: blur(80px); z-index: -1;"></div>
+                <div style="position: absolute; bottom: -10%; right: -10%; width: 300px; height: 300px; background: rgba(168, 85, 247, 0.1); border-radius: 50%; filter: blur(80px); z-index: -1;"></div>
+
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px; background: #fff; border-radius: 99px; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
+                        <span style="display: block; width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+                        <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">Welcome to the new era of education</span>
+                    </div>
+                </div>
+
+                <h1 style="font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1.5rem; color: var(--text-main);">
+                    Empowering <span style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Knowledge</span>,<br />
+                    Streamlining <span style="background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Success</span>.
+                </h1>
+
+                <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 700px; margin-bottom: 3rem; line-height: 1.6;">
+                    SIMS is the comprehensive Student Information Management System designed to bridge the gap between students, lecturers, and administration. Experience seamless academic management today.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 900px; width: 100%;">
+                    <div class="card-modern hover-lift" style="padding: 1.5rem; text-align: left;">
+                        <div style="width: 40px; height: 40px; background: #e0e7ff; color: #4338ca; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <h4 style="font-weight: 700; margin-bottom: 0.5rem;">Smart Learning</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">Track your progress and enroll in courses with ease.</p>
+                    </div>
+
+                    <div class="card-modern hover-lift" style="padding: 1.5rem; text-align: left;">
+                        <div style="width: 40px; height: 40px; background: #f3e8ff; color: #9333ea; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <h4 style="font-weight: 700; margin-bottom: 0.5rem;">Real-time Grading</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">Instant grade updates and performance analytics.</p>
+                    </div>
+
+                    <div class="card-modern hover-lift" style="padding: 1.5rem; text-align: left;">
+                        <div style="width: 40px; height: 40px; background: #ecfdf5; color: #059669; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                            <i class="fa-regular fa-clock"></i>
+                        </div>
+                        <h4 style="font-weight: 700; margin-bottom: 0.5rem;">Scheduling</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">Never miss a class with our integrated timetable.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 3rem; color: var(--text-muted); font-size: 0.9rem;">
+                    Please use the navigation bar above to <span style="color: var(--primary); font-weight: 600;">Log In</span> or <span style="color: var(--primary); font-weight: 600;">Register</span>.
+                </div>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>

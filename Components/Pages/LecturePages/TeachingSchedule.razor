@@ -1,0 +1,95 @@
+﻿@page "/teaching-schedule"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@attribute [Authorize(Roles = "Lecture")]
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Teaching Schedule</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Teaching Schedule</h1>
+            <div style="color: var(--text-muted);">Your assigned classes and locations</div>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div style="text-align: center; padding: 4rem;">Loading...</div>
+    }
+    else if (!Schedules.Any())
+    {
+        <div class="card-modern" style="text-align: center; padding: 3rem;">
+            <p>You have no teaching schedule.</p>
+        </div>
+    }
+    else
+    {
+        <div style="display: grid; gap: 1.5rem;">
+            @foreach (var dayGroup in Schedules.GroupBy(s => s.DayOfWeek).OrderBy(g => g.Key))
+            {
+                <div class="card-modern course-card-item type-lecturer" style="padding: 0 !important; border: 1px solid #e2e8f0;">
+                    <div class="course-card-top"></div>
+                    <div style="padding: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem; color: var(--text-main); border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
+                            @dayGroup.Key
+                        </h3>
+
+                        <div style="display: grid; gap: 1rem;">
+                            @foreach (var item in dayGroup.OrderBy(x => x.StartTime))
+                            {
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8fafc; border-radius: 12px;">
+                                    <div style="display: flex; gap: 1rem; align-items: center;">
+                                        <div style="text-align: center; min-width: 80px;">
+                                            <div style="font-weight: 700; color: #4f46e5;">@item.StartTime.ToString("HH:mm")</div>
+                                            <div style="font-size: 0.8rem; color: var(--text-muted);">to @item.EndTime.ToString("HH:mm")</div>
+                                        </div>
+                                        <div style="border-left: 2px solid #e2e8f0; padding-left: 1rem;">
+                                            <div style="font-weight: 600; font-size: 1.1rem;">@(item.Course?.Name ?? "Unknown Course")</div>
+                                            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                                                <i class="fa-solid fa-layer-group"></i> @(item.Course?.Subject?.Name ?? "No Subject")
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="background: #e0e7ff; color: #4338ca; padding: 5px 12px; border-radius: 8px; font-weight: 600;">
+                                        <i class="fa-solid fa-location-dot"></i> @item.Room
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Schedule> Schedules { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            using var context = DbFactory.CreateDbContext();
+
+            Schedules = await context.Schedules
+                .Include(s => s.Course)
+                .ThenInclude(c => c.Subject)
+                .Where(s => s.Course.LectureId == user.Id)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        IsLoading = false;
+    }
+}

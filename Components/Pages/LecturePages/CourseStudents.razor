@@ -1,0 +1,135 @@
+﻿@page "/lecture/course-students"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Lecture")]
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Class List</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Class List</h1>
+            <div style="color: var(--text-muted);">
+                Students enrolled in <strong>@(CourseName ?? "Loading...")</strong>
+            </div>
+        </div>
+        <a href="/my-courses" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to Courses
+        </a>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+            <p style="margin-top: 1rem;">Loading student list...</p>
+        </div>
+    }
+    else if (!Students.Any())
+    {
+        <div class="card-modern" style="text-align: center; padding: 3rem;">
+            <div style="width: 60px; height: 60px; background: #f1f5f9; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: var(--text-muted);">
+                <i class="fa-solid fa-users-slash fa-2x"></i>
+            </div>
+            <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">No Students Enrolled</h3>
+            <p style="color: var(--text-muted);">There are no students currently enrolled in this course.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card-modern">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 40px; height: 40px; background: #e0e7ff; color: #4338ca; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; color: var(--text-main);">Total Students</h4>
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">@Students.Count active enrollments</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container" style="box-shadow: none; border: 1px solid #e2e8f0;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Student Name</th>
+                            <th>Student ID</th>
+                            <th>Email Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (student, index) in Students.Select((s, i) => (s, i + 1)))
+                        {
+                            <tr>
+                                <td style="color: var(--text-muted); text-align: center;">@index</td>
+                                <td>
+                                    <span style="font-weight: 600; color: var(--text-main);">@student.Name</span>
+                                </td>
+                                <td>
+                                    <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; color: #64748b;">
+                                        @(string.IsNullOrEmpty(student.StudentId) ? "N/A" : student.StudentId)
+                                    </span>
+                                </td>
+                                <td style="color: var(--text-muted);">@student.Email</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private int CourseId { get; set; }
+    private string? CourseName;
+    private List<ApplicationUser> Students { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null && CourseId > 0)
+        {
+            using var context = DbFactory.CreateDbContext();
+
+            // 1. BẢO MẬT: Kiểm tra xem khóa học này có phải của Giảng viên đang đăng nhập không
+            var course = await context.Courses
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == CourseId && c.LectureId == user.Id);
+
+            if (course == null)
+            {
+                // Nếu cố tình truy cập khóa học không phải của mình -> Chặn
+                NavigationManager.NavigateTo("/access-denied");
+                return;
+            }
+
+            CourseName = course.Name;
+
+            // 2. Lấy danh sách sinh viên
+            Students = await context.Enrollments
+                .Where(e => e.CourseId == CourseId)
+                .Include(e => e.Student)
+                .Select(e => e.Student)
+                .OrderBy(s => s.Name)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        IsLoading = false;
+    }
+}

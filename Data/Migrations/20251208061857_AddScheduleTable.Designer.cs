@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SIMS.Data;
 
@@ -11,9 +12,11 @@ using SIMS.Data;
 namespace SIMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251208061857_AddScheduleTable")]
+    partial class AddScheduleTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -297,9 +300,6 @@ namespace SIMS.Migrations
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
 
-                    b.Property<double?>("Score")
-                        .HasColumnType("float");
-
                     b.Property<string>("StudentId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -349,14 +349,14 @@ namespace SIMS.Migrations
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("int");
 
-                    b.Property<TimeOnly>("EndTime")
+                    b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
                     b.Property<string>("Room")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<TimeOnly>("StartTime")
+                    b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
 
                     b.HasKey("Id");

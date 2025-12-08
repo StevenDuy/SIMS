@@ -1,0 +1,72 @@
+﻿@page "/schedules"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using SIMS.Data
+@attribute [Authorize(Roles = "Admin")]
+@implements IAsyncDisposable
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+
+<PageTitle>Schedules Management</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Schedule Management</h1>
+            <div style="color: var(--text-muted);">Manage timetable for all courses</div>
+        </div>
+        <div style="display: flex; gap: 2rem; align-items: center;">
+            <div class="stat-text">
+                <i class="fa-regular fa-clock"></i>
+                <span>@(context.Schedules.Count()) Entries</span>
+            </div>
+            <a href="schedules/create" class="btn btn-primary hover-lift">
+                <i class="fa-solid fa-plus"></i> Add Schedule
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-scroll">
+            <QuickGrid Class="table" Items="context.Schedules.Include(s => s.Course).ThenInclude(c => c.Lecture)">
+                <PropertyColumn Property="s => s.Course != null ? s.Course.Name : string.Empty" Title="Course" Sortable="true" />
+
+                <TemplateColumn Title="Lecturer">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-user-tie" style="color: var(--primary);"></i>
+                        <span>@(context.Course?.Lecture?.Name ?? "Unassigned")</span>
+                    </div>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Day & Time" Sortable="true" SortBy="@sortDay">
+                    <span style="font-weight: 600;">@context.DayOfWeek</span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        (@context.StartTime.ToString("HH:mm") - @context.EndTime.ToString("HH:mm"))
+                    </span>
+                </TemplateColumn>
+
+                <PropertyColumn Property="s => s.Room" Title="Location" Sortable="true" />
+
+                <TemplateColumn Title="Actions">
+                    <div style="display: flex; gap: 0.75rem;">
+                        <a href="@($"schedules/edit?id={context.Id}")" class="btn-icon" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        <a href="@($"schedules/delete?id={context.Id}")" class="btn-icon delete" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </a>
+                    </div>
+                </TemplateColumn>
+            </QuickGrid>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationDbContext context = default!;
+    GridSort<Schedule> sortDay = GridSort<Schedule>.ByAscending(s => s.DayOfWeek).ThenAscending(s => s.StartTime);
+
+    protected override void OnInitialized() => context = DbFactory.CreateDbContext();
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

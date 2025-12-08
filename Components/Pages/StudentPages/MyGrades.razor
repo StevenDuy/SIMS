@@ -1,0 +1,104 @@
+﻿@page "/my-grades"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@attribute [Authorize(Roles = "Student")]
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>My Grades</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Academic Results</h1>
+            <div style="color: var(--text-muted);">Your performance report</div>
+        </div>
+
+        @if (GradeRecords.Any(x => x.Score.HasValue))
+        {
+            <div class="dashboard-stats-container">
+                <div class="dashboard-stat" style="color: var(--primary);">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>GPA: @(GradeRecords.Where(x => x.Score.HasValue).Average(x => x.Score.Value).ToString("0.00"))</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (IsLoading)
+    {
+        <div style="text-align: center; padding: 4rem;">Loading...</div>
+    }
+    else if (!GradeRecords.Any())
+    {
+        <div class="card-modern" style="text-align: center; padding: 3rem;">
+            <p>You have no graded courses yet.</p>
+        </div>
+    }
+    else
+    {
+        <div class="course-grid-layout">
+            @foreach (var item in GradeRecords)
+            {
+                // Logic màu sắc điểm
+                string gradeColor = item.Score >= 5 ? "#059669" : (item.Score == null ? "#64748b" : "#dc2626");
+                string gradeBg = item.Score >= 5 ? "#ecfdf5" : (item.Score == null ? "#f1f5f9" : "#fee2e2");
+                string gradeText = item.Score.HasValue ? item.Score.Value.ToString("0.0") : "N/A";
+
+                <div class="course-card-item type-student">
+                    <div class="course-card-top" style="background: @(item.Score >= 5 ? "linear-gradient(90deg, #10b981 0%, #34d399 100%)" : "linear-gradient(90deg, #ef4444 0%, #f87171 100%)")"></div>
+
+                    <div class="course-card-body">
+                        <div class="course-card-header">
+                            <div class="course-icon" style="background: @gradeBg; color: @gradeColor;">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <span class="course-tag">@item.Course.Semester.Name</span>
+                        </div>
+
+                        <h3 class="course-name">@item.Course.Name</h3>
+
+                        <div class="course-sub-info">
+                            <i class="fa-solid fa-book-open"></i> @item.Course.Subject.Name
+                        </div>
+
+                        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: end; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+                            <div style="font-size: 0.9rem; color: var(--text-muted);">Final Score</div>
+                            <div style="font-size: 2rem; font-weight: 800; color: @gradeColor; line-height: 1;">
+                                @gradeText
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Enrollment> GradeRecords { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            using var context = DbFactory.CreateDbContext();
+            GradeRecords = await context.Enrollments
+                .Include(e => e.Course).ThenInclude(c => c.Subject)
+                .Include(e => e.Course).ThenInclude(c => c.Semester)
+                .Where(e => e.StudentId == user.Id)
+                .OrderByDescending(e => e.Course.Semester.Id)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        IsLoading = false;
+    }
+}
