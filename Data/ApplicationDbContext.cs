@@ -11,6 +11,7 @@ namespace SIMS.Data
         public DbSet<Major> Majors { get; set; } = null!;
         public DbSet<Course> Courses { get; set; } = null!;
         public DbSet<Enrollment> Enrollments { get; set; } = null!;
+        public DbSet<Schedule> Schedules { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

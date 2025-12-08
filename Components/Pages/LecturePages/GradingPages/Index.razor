@@ -1,0 +1,157 @@
+﻿@page "/lecture/grading"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Lecture")]
+@inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Input Grades</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Input Grades</h1>
+            <div style="color: var(--text-muted);">Enter scores for your students</div>
+        </div>
+    </div>
+
+    <div class="card-modern" style="margin-bottom: 2rem;">
+        <div class="form-group">
+            <label class="form-label">Select Your Course</label>
+            <InputSelect Value="SelectedCourseId" ValueExpression="@(() => SelectedCourseId)" ValueChanged="@((int id) => LoadEnrollments(id))" class="form-select">
+                <option value="0">-- Select a Course --</option>
+                @foreach (var c in AvailableCourses)
+                {
+                    <option value="@c.Id">@c.Name (@c.Semester?.Name)</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+
+    @if (SelectedCourseId > 0)
+    {
+        <div class="table-container animate-fade-in">
+            @if (Enrollments.Any())
+            {
+                <EditForm Model="Enrollments" OnValidSubmit="SaveGrades">
+                    <DataAnnotationsValidator />
+
+                    <div style="padding: 1.5rem; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin:0; color: var(--primary);">
+                            <i class="fa-solid fa-users"></i> Students List (@Enrollments.Count)
+                        </h4>
+                        <button type="submit" class="btn btn-primary hover-lift">
+                            <i class="fa-solid fa-floppy-disk"></i> Save All
+                        </button>
+                    </div>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Student ID</th>
+                                <th style="width: 150px;">Score (0-10)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Enrollments)
+                            {
+                                <tr>
+                                    <td><strong>@item.Student.Name</strong></td>
+                                    <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem;">@item.Student.StudentId</span></td>
+                                    <td>
+                                        <InputNumber @bind-Value="item.Score" class="form-control" min="0" max="10" step="0.1" />
+                                        <ValidationMessage For="@(() => item.Score)" class="validation-message" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </EditForm>
+            }
+            else
+            {
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <p>No students enrolled in this course.</p>
+                </div>
+            }
+        </div>
+
+        @if (ShowSuccess)
+        {
+            <div class="alert alert-success animate-fade-in" style="margin-top: 1rem; border-radius: 12px;">
+                <i class="fa-solid fa-check-circle"></i> Grades updated!
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<Course> AvailableCourses { get; set; } = new();
+    private List<Enrollment> Enrollments { get; set; } = new();
+    private int SelectedCourseId { get; set; }
+    private bool ShowSuccess { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            using var context = DbFactory.CreateDbContext();
+            // Chỉ lấy các khóa học do giảng viên này phụ trách
+            AvailableCourses = await context.Courses
+                .Include(c => c.Semester)
+                .Where(c => c.LectureId == user.Id)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+    }
+
+    private async Task LoadEnrollments(int courseId)
+    {
+        SelectedCourseId = courseId;
+        ShowSuccess = false;
+
+        if (courseId > 0)
+        {
+            using var context = DbFactory.CreateDbContext();
+            // Kiểm tra bảo mật: Đảm bảo môn học này đúng là của giảng viên (đề phòng hack ID)
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+
+            var isMyCourse = await context.Courses.AnyAsync(c => c.Id == courseId && c.LectureId == user.Id);
+            if (!isMyCourse) return;
+
+            Enrollments = await context.Enrollments
+                .Include(e => e.Student)
+                .Where(e => e.CourseId == courseId)
+                .ToListAsync();
+        }
+        else
+        {
+            Enrollments.Clear();
+        }
+    }
+
+    private async Task SaveGrades()
+    {
+        using var context = DbFactory.CreateDbContext();
+        foreach (var item in Enrollments)
+        {
+            context.Enrollments.Attach(item);
+            context.Entry(item).Property(x => x.Score).IsModified = true;
+        }
+        await context.SaveChangesAsync();
+        ShowSuccess = true;
+        await Task.Delay(3000);
+        ShowSuccess = false;
+        StateHasChanged();
+    }
+}
