@@ -808,3 +808,195 @@ tbody tr:hover td {
     }
 }
 
+/* --- Teaching Schedule & Attendance Styles --- */
+.schedule-loading,
+.schedule-empty {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted);
+}
+
+.schedule-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+/* Card customizations */
+.schedule-card {
+    padding: 0 !important;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+    .schedule-card.is-today {
+        border-color: #4f46e5;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+    }
+
+.schedule-header-strip {
+    height: 6px;
+    background: transparent;
+}
+
+    .schedule-header-strip.is-today {
+        background: #4f46e5;
+    }
+
+.schedule-content {
+    padding: 1.5rem;
+}
+
+.schedule-day-title {
+    margin-bottom: 1rem;
+    color: var(--text-main);
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.session-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+}
+
+.session-info-left {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.time-block {
+    text-align: center;
+    min-width: 80px;
+}
+
+.time-start {
+    font-weight: 700;
+    color: #4f46e5;
+    font-size: 1.1rem;
+}
+
+.time-end {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.course-details {
+    border-left: 2px solid #e2e8f0;
+    padding-left: 1rem;
+}
+
+.course-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.subject-name {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.session-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.room-badge {
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* --- Modal Styles --- */
+.modal-backdrop-custom {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content-custom {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    width: 500px;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.student-list-grid {
+    display: grid;
+    gap: 10px;
+    margin: 1.5rem 0;
+}
+
+.student-attendance-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: background 0.1s;
+}
+
+    .student-attendance-item:hover {
+        background: #f8fafc;
+    }
+
+.checkbox-lg {
+    width: 22px;
+    height: 22px;
+    accent-color: #ef4444;
+    cursor: pointer;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

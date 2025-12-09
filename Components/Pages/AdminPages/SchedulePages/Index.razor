@@ -1,72 +1,262 @@
 ﻿@page "/schedules"
 @using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using SIMS.Data
-@attribute [Authorize(Roles = "Admin")]
-@implements IAsyncDisposable
 @inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
-<PageTitle>Schedules Management</PageTitle>
+<PageTitle>Schedules</PageTitle>
 <link rel="stylesheet" href="app.css" />
 
 <div class="app-container animate-fade-in">
     <div class="page-header">
         <div class="header-content">
-            <h1>Schedule Management</h1>
-            <div style="color: var(--text-muted);">Manage timetable for all courses</div>
+            <h1>Schedule Manager</h1>
+            <div style="color: var(--text-muted); margin-top: 5px;">Manage class timings and rooms</div>
         </div>
+
         <div style="display: flex; gap: 2rem; align-items: center;">
-            <div class="stat-text">
-                <i class="fa-regular fa-clock"></i>
-                <span>@(context.Schedules.Count()) Entries</span>
-            </div>
             <a href="schedules/create" class="btn btn-primary hover-lift">
-                <i class="fa-solid fa-plus"></i> Add Schedule
+                <i class="fa-solid fa-plus"></i> New Schedule
             </a>
         </div>
     </div>
 
     <div class="table-container">
         <div class="table-scroll">
-            <QuickGrid Class="table" Items="context.Schedules.Include(s => s.Course).ThenInclude(c => c.Lecture)">
-                <PropertyColumn Property="s => s.Course != null ? s.Course.Name : string.Empty" Title="Course" Sortable="true" />
+            @if (SchedulesQueryable == null)
+            {
+                <div style="padding: 2rem; text-align: center;">Loading schedules...</div>
+            }
+            else
+            {
+                <QuickGrid Class="table" Items="SchedulesQueryable">
 
-                <TemplateColumn Title="Lecturer">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-user-tie" style="color: var(--primary);"></i>
-                        <span>@(context.Course?.Lecture?.Name ?? "Unassigned")</span>
-                    </div>
-                </TemplateColumn>
+                    <TemplateColumn Title="Course" Sortable="true">
+                        <div style="font-weight: 600;">@context.Course?.Name</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">@context.Course?.Subject?.Name</div>
+                    </TemplateColumn>
 
-                <TemplateColumn Title="Day & Time" Sortable="true" SortBy="@sortDay">
-                    <span style="font-weight: 600;">@context.DayOfWeek</span>
-                    <span style="color: var(--text-muted); font-size: 0.9rem;">
-                        (@context.StartTime.ToString("HH:mm") - @context.EndTime.ToString("HH:mm"))
-                    </span>
-                </TemplateColumn>
+                    <PropertyColumn Property="s => s.DayOfWeek" Title="Day" Sortable="true" />
 
-                <PropertyColumn Property="s => s.Room" Title="Location" Sortable="true" />
+                    <TemplateColumn Title="Time">
+                        <span style="font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+                            @context.StartTime.ToString("HH:mm") - @context.EndTime.ToString("HH:mm")
+                        </span>
+                    </TemplateColumn>
 
-                <TemplateColumn Title="Actions">
-                    <div style="display: flex; gap: 0.75rem;">
-                        <a href="@($"schedules/edit?id={context.Id}")" class="btn-icon" title="Edit">
-                            <i class="fa-solid fa-pen"></i>
-                        </a>
-                        <a href="@($"schedules/delete?id={context.Id}")" class="btn-icon delete" title="Delete">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </a>
-                    </div>
-                </TemplateColumn>
-            </QuickGrid>
+                    <PropertyColumn Property="s => s.Room" Title="Room" Sortable="true" />
+
+                    <TemplateColumn Title="Actions">
+                        <div style="display: flex; gap: 0.75rem;">
+
+                            <button class="btn-icon" title="Manage Attendance" @onclick="() => OpenAttendanceModal(context)">
+                                <i class="fa-solid fa-clipboard-user"></i>
+                            </button>
+
+                            <a href="@($"schedules/edit?id={context.Id}")" class="btn-icon" title="Edit">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+
+                            <a href="@($"schedules/delete?id={context.Id}")" class="btn-icon delete" title="Delete">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </a>
+                        </div>
+                    </TemplateColumn>
+                </QuickGrid>
+            }
         </div>
     </div>
 </div>
 
-@code {
-    private ApplicationDbContext context = default!;
-    GridSort<Schedule> sortDay = GridSort<Schedule>.ByAscending(s => s.DayOfWeek).ThenAscending(s => s.StartTime);
+@if (ShowModal)
+{
+    <div class="modal-backdrop-custom">
+        <div class="modal-content-custom animate-fade-in">
+            <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--text-main);">Attendance Check</h3>
+                <div style="color: var(--text-muted);">@SelectedSchedule?.Course?.Name</div>
+            </div>
 
-    protected override void OnInitialized() => context = DbFactory.CreateDbContext();
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+            <div style="background: #f0fdf4; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #bbf7d0; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">Target Date (Auto-calculated)</div>
+                    <div style="font-size: 1.1rem; font-weight: 700;">
+                        @SelectedDate.ToString("dd/MM/yyyy") (@SelectedSchedule?.DayOfWeek)
+                    </div>
+                </div>
+                <i class="fa-regular fa-calendar-check" style="font-size: 1.5rem; opacity: 0.5;"></i>
+            </div>
+
+            @if (IsModalLoading)
+            {
+                <div class="text-center py-3">Loading data...</div>
+            }
+            else if (ClassEnrollments == null || !ClassEnrollments.Any())
+            {
+                <div class="alert alert-info">No students enrolled in this course.</div>
+            }
+            else
+            {
+                <div class="student-list-grid">
+                    @foreach (var enroll in ClassEnrollments)
+                    {
+                        var isAbsent = Absences.Contains(enroll.StudentId);
+                        <div class="student-attendance-item" style="@(isAbsent ? "background: #fff1f2; border-color: #fecdd3;" : "")">
+                            <div>
+                                <strong style="@(isAbsent ? "color: #e11d48;" : "")">@enroll.Student?.UserName</strong> <br />
+                                <span class="text-muted small">@enroll.Student?.Email</span>
+                            </div>
+
+                            <input type="checkbox" class="checkbox-lg"
+                                   checked="@isAbsent"
+                                   @onchange="(e) => ToggleAbsence(enroll.StudentId, e.Value)" />
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                <button class="btn btn-primary" @onclick="SaveAttendance">Save Changes</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IQueryable<Schedule>? SchedulesQueryable;
+
+    private bool ShowModal { get; set; } = false;
+    private bool IsModalLoading { get; set; } = false;
+    private Schedule? SelectedSchedule { get; set; }
+    private DateOnly SelectedDate { get; set; }
+
+    private List<Enrollment>? ClassEnrollments { get; set; }
+    private HashSet<string> Absences { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var list = await context.Schedules
+            .Include(s => s.Course)
+            .ThenInclude(c => c.Subject)
+            .OrderByDescending(s => s.Id)
+            .AsNoTracking()
+            .ToListAsync();
+
+        SchedulesQueryable = list.AsQueryable();
+    }
+
+    private async Task OpenAttendanceModal(Schedule schedule)
+    {
+        SelectedSchedule = schedule;
+
+        // --- LOGIC MỚI: TỰ ĐỘNG CHỌN NGÀY TIẾP THEO (Next Occurrence) ---
+        var today = DateTime.Now;
+
+        // 1. Chuyển đổi sang hệ chuẩn (Thứ 2=1 ... Chủ nhật=7) để dễ so sánh
+        int currentDayVal = (int)today.DayOfWeek;
+        if (currentDayVal == 0) currentDayVal = 7; // Chủ nhật là 7
+
+        int targetDayVal = (int)schedule.DayOfWeek;
+        if (targetDayVal == 0) targetDayVal = 7; // Chủ nhật là 7
+
+        // 2. Tính khoảng cách ngày
+        int diff = targetDayVal - currentDayVal;
+
+        // Logic:
+        // - Nếu diff >= 0 (Ví dụ T2 bấm T6 -> diff=4): Ngày đó chưa tới hoặc là hôm nay -> Lấy trong tuần này.
+        // - Nếu diff < 0  (Ví dụ T6 bấm T2 -> diff=-4): Ngày đó đã qua -> Cộng thêm 7 ngày để lấy tuần sau.
+        if (diff < 0)
+        {
+            diff += 7;
+        }
+
+        SelectedDate = DateOnly.FromDateTime(today.AddDays(diff));
+        // -------------------------------------------------------------
+
+        ShowModal = true;
+        await LoadModalData();
+    }
+
+    private async Task LoadModalData()
+    {
+        if (SelectedSchedule == null) return;
+        IsModalLoading = true;
+        ClassEnrollments = null;
+        Absences.Clear();
+
+        using var db = DbFactory.CreateDbContext();
+
+        ClassEnrollments = await db.Enrollments
+            .Include(e => e.Student)
+            .Where(e => e.CourseId == SelectedSchedule.CourseId)
+            .OrderBy(e => e.Student.UserName)
+            .AsNoTracking()
+            .ToListAsync();
+
+        // Load dữ liệu đúng ngày đã tính toán
+        var existingAbsences = await db.Attendances
+            .Where(a => a.CourseId == SelectedSchedule.CourseId && a.Date == SelectedDate && a.IsAbsent)
+            .Select(a => a.StudentId)
+            .ToListAsync();
+
+        foreach (var id in existingAbsences) Absences.Add(id);
+        IsModalLoading = false;
+    }
+
+    private void ToggleAbsence(string studentId, object? isChecked)
+    {
+        if (isChecked is bool checkedVal && checkedVal)
+        {
+            Absences.Add(studentId);
+        }
+        else
+        {
+            Absences.Remove(studentId);
+        }
+    }
+
+    private void CloseModal()
+    {
+        ShowModal = false;
+        SelectedSchedule = null;
+    }
+
+    private async Task SaveAttendance()
+    {
+        if (SelectedSchedule == null) return;
+        IsModalLoading = true;
+
+        using var db = DbFactory.CreateDbContext();
+
+        // 1. Xóa bản ghi cũ CỦA ĐÚNG NGÀY ĐÃ TÍNH
+        var oldRecords = await db.Attendances
+            .Where(a => a.CourseId == SelectedSchedule.CourseId && a.Date == SelectedDate)
+            .ToListAsync();
+
+        db.Attendances.RemoveRange(oldRecords);
+
+        // 2. Lưu mới
+        if (Absences.Any())
+        {
+            foreach (var studentId in Absences)
+            {
+                db.Attendances.Add(new Attendance
+                {
+                    CourseId = SelectedSchedule.CourseId,
+                    StudentId = studentId,
+                    Date = SelectedDate, // Lưu cứng vào ngày đã tính
+                    IsAbsent = true,
+                    Note = "Admin Edit"
+                });
+            }
+        }
+
+        await db.SaveChangesAsync();
+        IsModalLoading = false;
+        ShowModal = false;
+    }
 }

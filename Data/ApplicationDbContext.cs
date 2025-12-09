@@ -13,11 +13,13 @@ namespace SIMS.Data
         public DbSet<Enrollment> Enrollments { get; set; } = null!;
         public DbSet<Schedule> Schedules { get; set; } = default!;
         public DbSet<Notification> Notifications { get; set; } = null!;
+        public DbSet<Attendance> Attendances { get; set; } = null!; // Updated
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // Existing configurations
             modelBuilder.Entity<Enrollment>()
                 .HasOne(e => e.Student)
                 .WithMany()
@@ -29,6 +31,20 @@ namespace SIMS.Data
                 .WithMany()
                 .HasForeignKey(e => e.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // --- FIX: ATTENDANCE CONFIGURATION ---
+            // Use Restrict to prevent SQL Cycle errors
+            modelBuilder.Entity<Attendance>()
+                .HasOne(a => a.Student)
+                .WithMany()
+                .HasForeignKey(a => a.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Attendance>()
+                .HasOne(a => a.Course)
+                .WithMany()
+                .HasForeignKey(a => a.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
