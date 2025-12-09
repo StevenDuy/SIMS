@@ -1,0 +1,281 @@
+﻿@page "/notification/create"
+@page "/notification/edit/{Id:int}"
+@page "/notification/{Id:int}"
+
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using SIMS.Data
+@using System.IO
+@using NotificationModel = SIMS.Data.Notification
+
+@rendermode InteractiveServer
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@inject IWebHostEnvironment Environment
+
+<PageTitle>@PageTitle</PageTitle>
+<link rel="stylesheet" href="app.css" />
+
+<div class="app-container animate-fade-in">
+    <div style="margin-bottom: 1rem;">
+        <a href="/" class="btn btn-secondary hover-lift"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div style="text-align: center; padding: 4rem; color: #64748b;">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+        </div>
+    }
+    else if (ViewItem != null)
+    {
+        @* --- GIAO DIỆN XEM CHI TIẾT --- *@
+        <div class="card-modern" style="max-width: 900px; margin: 0 auto;">
+            <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <h2 style="color: var(--primary); margin-bottom: 0.5rem;">@ViewItem.Title</h2>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">
+                    <i class="fa-regular fa-clock"></i> @ViewItem.CreatedAt.ToString("MMMM dd, yyyy - HH:mm")
+                </div>
+            </div>
+
+            <div style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 2rem; white-space: pre-wrap; color: #334155;">@ViewItem.Content</div>
+
+            @if (!string.IsNullOrEmpty(ViewItem.LinkUrl) || !string.IsNullOrEmpty(ViewItem.AttachmentPath))
+            {
+                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                    <h5 style="margin-bottom: 1rem; font-size: 1rem;">Attachments</h5>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        @if (!string.IsNullOrEmpty(ViewItem.LinkUrl))
+                        {
+                            <a href="@ViewItem.LinkUrl" target="_blank" class="btn btn-secondary hover-lift"><i class="fa-solid fa-external-link-alt"></i> Open Link</a>
+                        }
+                        @if (!string.IsNullOrEmpty(ViewItem.AttachmentPath))
+                        {
+                            <a href="@ViewItem.AttachmentPath" download="@ViewItem.AttachmentName" class="btn btn-primary hover-lift"><i class="fa-solid fa-download"></i> Download File</a>
+                        }
+                    </div>
+                </div>
+            }
+
+            <AuthorizeView Roles="Admin">
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button class="btn btn-secondary hover-lift" @onclick="OpenEditModal" type="button">
+                        <i class="fa-solid fa-pen"></i> Edit
+                    </button>
+                    <button class="btn btn-danger hover-lift" @onclick="() => ShowDeleteConfirm = true" type="button">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </div>
+            </AuthorizeView>
+        </div>
+    }
+</div>
+
+@* --- MODAL FORM (CREATE / EDIT) --- *@
+@if (ShowFormModal)
+{
+    <div class="modal-overlay" @onclick="CloseFormModal">
+        <div class="modal-form-box" @onclick:stopPropagation>
+            <div class="modal-form-header">
+                <h4 style="margin:0; font-weight: 700;">@(InputModel.Id == 0 ? "Create Notification" : "Edit Notification")</h4>
+                <button type="button" class="btn-close" @onclick="CloseFormModal" style="background: none; border: none; font-size: 1.5rem;">&times;</button>
+            </div>
+
+            <EditForm Model="InputModel" OnValidSubmit="SaveNotification">
+                <div class="modal-form-body">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" />
+
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Title</label>
+                        <InputText @bind-Value="InputModel.Title" class="form-control" placeholder="Enter title..." />
+                        <ValidationMessage For="() => InputModel.Title" class="text-danger small" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Content</label>
+                        <InputTextArea @bind-Value="InputModel.Content" class="form-control" rows="6" placeholder="Enter detailed content..." />
+                        <ValidationMessage For="() => InputModel.Content" class="text-danger small" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Link (Optional)</label>
+                        <InputText @bind-Value="InputModel.LinkUrl" class="form-control" placeholder="https://..." />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">File (Max 5MB)</label>
+                        <InputFile OnChange="HandleFileSelected" class="form-control" />
+                        @if (!string.IsNullOrEmpty(CurrentFileName))
+                        {
+                            <div class="mt-2 text-primary small">
+                                <i class="fa-solid fa-paperclip"></i> Current: <strong>@CurrentFileName</strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="modal-form-footer">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="CloseFormModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Save
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@* --- MODAL CONFIRM DELETE --- *@
+@if (ShowDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="() => ShowDeleteConfirm = false">
+        <div class="modal-confirm-box" @onclick:stopPropagation>
+            <div style="color: #ef4444; font-size: 3rem; margin-bottom: 1rem;"><i class="fa-regular fa-circle-xmark"></i></div>
+            <h3 style="margin-bottom: 0.5rem;">Delete this?</h3>
+            <p style="color: #64748b; margin-bottom: 1.5rem;">Cannot be undone.</p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn btn-secondary" @onclick="() => ShowDeleteConfirm = false" type="button">Cancel</button>
+                <button class="btn btn-danger" @onclick="ConfirmDelete" type="button">Delete</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private NotificationModel InputModel { get; set; } = new();
+    private NotificationModel? ViewItem;
+    private IBrowserFile? UploadedFile;
+    private string? CurrentFileName;
+
+    private bool IsLoading = true;
+    private bool ShowFormModal = false;
+    private bool ShowDeleteConfirm = false;
+
+    private string PageTitle => Id == null ? "Create Notification" : "Notification Details";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+        using var context = DbFactory.CreateDbContext();
+
+        // 1. Trường hợp URL là /notification/create
+        if (Id == null)
+        {
+            InputModel = new NotificationModel();
+            CurrentFileName = null;
+            ShowFormModal = true; // Mở modal ngay
+            IsLoading = false;
+        }
+        // 2. Trường hợp xem chi tiết /notification/{Id}
+        else
+        {
+            ViewItem = await context.Notifications.AsNoTracking().FirstOrDefaultAsync(n => n.Id == Id);
+            if (ViewItem == null)
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+            IsLoading = false;
+        }
+    }
+
+    private void OpenEditModal()
+    {
+        if (ViewItem == null) return;
+        InputModel = new NotificationModel
+        {
+            Id = ViewItem.Id,
+            Title = ViewItem.Title,
+            Content = ViewItem.Content,
+            LinkUrl = ViewItem.LinkUrl,
+            AttachmentPath = ViewItem.AttachmentPath,
+            AttachmentName = ViewItem.AttachmentName,
+            CreatedAt = ViewItem.CreatedAt
+        };
+        CurrentFileName = ViewItem.AttachmentName;
+        ShowFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        ShowFormModal = false;
+        if (Id == null) Navigation.NavigateTo("/");
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        UploadedFile = e.File;
+        if (UploadedFile.Size > 5 * 1024 * 1024) UploadedFile = null;
+    }
+
+    private async Task SaveNotification()
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        if (UploadedFile != null)
+        {
+            var folder = Path.Combine(Environment.WebRootPath, "uploads");
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+            if (!string.IsNullOrEmpty(InputModel.AttachmentPath))
+            {
+                var old = Path.Combine(Environment.WebRootPath, InputModel.AttachmentPath.TrimStart('/'));
+                if (File.Exists(old)) File.Delete(old);
+            }
+
+            var fileName = $"{Guid.NewGuid()}_{UploadedFile.Name}";
+            var path = Path.Combine(folder, fileName);
+            await using var stream = new FileStream(path, FileMode.Create);
+            await UploadedFile.OpenReadStream(5 * 1024 * 1024).CopyToAsync(stream);
+
+            InputModel.AttachmentPath = $"/uploads/{fileName}";
+            InputModel.AttachmentName = UploadedFile.Name;
+        }
+
+        if (InputModel.Id == 0) // CREATE
+        {
+            var count = await context.Notifications.CountAsync();
+            if (count >= 5)
+            {
+                var old = await context.Notifications.OrderBy(n => n.CreatedAt).FirstOrDefaultAsync();
+                if (old != null) context.Notifications.Remove(old);
+            }
+            InputModel.CreatedAt = DateTime.Now;
+            context.Notifications.Add(InputModel);
+            await context.SaveChangesAsync();
+            Navigation.NavigateTo("/");
+        }
+        else // UPDATE
+        {
+            context.Notifications.Update(InputModel);
+            await context.SaveChangesAsync();
+
+            // Reload view item immediately
+            ViewItem = await context.Notifications.AsNoTracking().FirstOrDefaultAsync(n => n.Id == InputModel.Id);
+            ShowFormModal = false;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var n = await context.Notifications.FindAsync(Id);
+        if (n != null)
+        {
+            if (!string.IsNullOrEmpty(n.AttachmentPath))
+            {
+                var path = Path.Combine(Environment.WebRootPath, n.AttachmentPath.TrimStart('/'));
+                if (File.Exists(path)) File.Delete(path);
+            }
+            context.Notifications.Remove(n);
+            await context.SaveChangesAsync();
+        }
+        Navigation.NavigateTo("/");
+    }
+}

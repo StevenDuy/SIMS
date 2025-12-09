@@ -1,0 +1,100 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using SIMS.Data
+@using Microsoft.AspNetCore.Authorization
+@implements IDisposable
+@rendermode InteractiveServer
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<div class="notification-wrapper" @onclick="ToggleDropdown">
+    <button class="bell-btn" title="Notifications">
+        <i class="fa-solid fa-bell"></i>
+        @if (UnreadCount > 0)
+        {
+            <span class="badge-counter">@UnreadCount</span>
+        }
+    </button>
+
+    @if (ShowDropdown)
+    {
+        <div class="notification-popup" @onclick:stopPropagation>
+            <div class="notif-header">
+                <span>Recent Notifications</span>
+                @if (UnreadCount > 0)
+                {
+                    <span class="badge bg-primary text-white" style="font-size: 0.7rem;">@UnreadCount New</span>
+                }
+            </div>
+
+            <div class="notif-list">
+                @if (NotificationList.Any())
+                {
+                    @foreach (var item in NotificationList)
+                    {
+                        <a href="notification/@item.Id" class="notif-item" @onclick="() => ShowDropdown = false">
+                            <span class="notif-item-title">@item.Title</span>
+                            <span class="notif-item-time">
+                                <i class="fa-regular fa-clock"></i> @item.CreatedAt.ToString("MMM dd, HH:mm")
+                            </span>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div style="padding: 2rem 1rem; text-align: center; color: #94a3b8;">
+                        <i class="fa-regular fa-bell-slash" style="font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.6;"></i>
+                        <p style="margin: 0; font-size: 0.85rem;">No notifications yet</p>
+                    </div>
+                }
+            </div>
+
+            <AuthorizeView Roles="Admin">
+                <div class="notif-footer">
+                    <a href="notification/create" class="btn-create-notif" @onclick="() => ShowDropdown = false">
+                        <i class="fa-solid fa-plus"></i> Create New
+                    </a>
+                </div>
+            </AuthorizeView>
+        </div>
+    }
+</div>
+
+@if (ShowDropdown)
+{
+    <div class="popup-overlay" @onclick="() => ShowDropdown = false"></div>
+}
+
+@code {
+    private bool ShowDropdown = false;
+    private List<Notification> NotificationList = new();
+    private int UnreadCount => NotificationList.Count;
+    private PeriodicTimer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        _ = RunTimer();
+    }
+
+    private async Task RunTimer()
+    {
+        while (await _timer!.WaitForNextTickAsync())
+        {
+            await LoadData();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadData()
+    {
+        using var context = DbFactory.CreateDbContext();
+        NotificationList = await context.Notifications
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    private void ToggleDropdown() => ShowDropdown = !ShowDropdown;
+    public void Dispose() => _timer?.Dispose();
+}

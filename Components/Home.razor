@@ -1,0 +1,98 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SIMS.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Dashboard</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="home-container animate-fade-in">
+
+            <div class="home-header">
+                <div class="home-welcome-title">
+                    Welcome back, <span style="color: #6366f1;">@context.User.Identity?.Name</span>! 👋
+                </div>
+                <div class="home-subtitle">
+                    Academic Dashboard
+                </div>
+            </div>
+
+            <div class="home-grid">
+                <div class="home-card">
+                    <div class="home-card-header" style="background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                    <div class="home-card-body">
+                        <div class="home-card-icon" style="background: #eff6ff; color: #3b82f6;">
+                            <i class="fa-solid fa-user-circle"></i>
+                        </div>
+                        <h3 class="home-card-title">My Profile</h3>
+                        <a href="Account/Manage" class="home-btn" style="background: #eff6ff; color: #3b82f6;">View Profile</a>
+                    </div>
+                </div>
+
+                <div class="home-card">
+                    <div class="home-card-header" style="background: linear-gradient(90deg, #8b5cf6, #d946ef);"></div>
+                    <div class="home-card-body">
+                        <AuthorizeView Roles="Student" Context="studentContext">
+                            <div class="home-card-icon" style="background: #f3e8ff; color: #9333ea;">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <h3 class="home-card-title">Learning</h3>
+                            <a href="my-enrollments" class="home-btn" style="background: #f3e8ff; color: #9333ea;">My Courses</a>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="Lecture" Context="lectureContext">
+                            <div class="home-card-icon" style="background: #f3e8ff; color: #9333ea;">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                            </div>
+                            <h3 class="home-card-title">Teaching</h3>
+                            <a href="my-courses" class="home-btn" style="background: #f3e8ff; color: #9333ea;">My Classes</a>
+                        </AuthorizeView>
+
+                        <AuthorizeView Roles="Admin" Context="adminContext">
+                            <div class="home-card-icon" style="background: #f3e8ff; color: #9333ea;">
+                                <i class="fa-solid fa-user-shield"></i>
+                            </div>
+                            <h3 class="home-card-title">Admin</h3>
+                            <a href="users" class="home-btn" style="background: #f3e8ff; color: #9333ea;">Manage System</a>
+                        </AuthorizeView>
+                    </div>
+                </div>
+
+                <div class="home-card">
+                    <div class="home-card-header" style="background: linear-gradient(90deg, #10b981, #14b8a6);"></div>
+                    <div class="home-card-body">
+                        <div class="home-card-icon" style="background: #ecfdf5; color: #059669;">
+                            <i class="fa-regular fa-calendar-check"></i>
+                        </div>
+                        <h3 class="home-card-title">Timetable</h3>
+                        <AuthorizeView Roles="Student" Context="sCtx"><a href="my-schedule" class="home-btn" style="background: #ecfdf5; color: #059669;">View</a></AuthorizeView>
+                        <AuthorizeView Roles="Lecture" Context="lCtx"><a href="teaching-schedule" class="home-btn" style="background: #ecfdf5; color: #059669;">View</a></AuthorizeView>
+                        <AuthorizeView Roles="Admin" Context="aCtx"><a href="schedules" class="home-btn" style="background: #ecfdf5; color: #059669;">Manage</a></AuthorizeView>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="landing-hero animate-fade-in">
+            <h1 class="landing-title">
+                SIMS Portal<br />
+                <span style="font-size: 2rem; font-weight: 400; color: #64748b;">Academic Management System</span>
+            </h1>
+
+            <p style="font-size: 1.1rem; color: #94a3b8; max-width: 600px; margin-bottom: 4rem;">
+                Please login to access your dashboard.
+            </p>
+
+            <div class="landing-features" style="opacity: 0.6;">
+                <div class="landing-item"><i class="fa-solid fa-graduation-cap fa-2x"></i></div>
+                <div class="landing-item"><i class="fa-solid fa-chalkboard-user fa-2x"></i></div>
+                <div class="landing-item"><i class="fa-solid fa-chart-pie fa-2x"></i></div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
