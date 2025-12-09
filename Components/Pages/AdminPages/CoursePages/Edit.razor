@@ -36,7 +36,13 @@
                 <input type="hidden" name="Course.Id" value="@Course.Id" />
 
                 <div class="form-grid">
-                    <div class="form-group form-full">
+                    <div class="form-group">
+                        <label class="form-label">Course Code <span style="color:var(--danger)">*</span></label>
+                        <InputText @bind-Value="Course.Code" class="form-control" placeholder="e.g. CS101" />
+                        <ValidationMessage For="() => Course.Code" class="validation-message" />
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Course Name <span style="color:var(--danger)">*</span></label>
                         <InputText @bind-Value="Course.Name" class="form-control" />
                         <ValidationMessage For="() => Course.Name" class="validation-message" />
@@ -45,7 +51,7 @@
                     <div class="form-group">
                         <label class="form-label">Subject</label>
                         <InputSelect @bind-Value="Course.SubjectId" class="form-control">
-                            <option value="0">Select Subject...</option>
+                            <option value="">Select Subject...</option>
                             @foreach (var s in Subjects)
                             {
                                 <option value="@s.Id">@s.Name</option>
@@ -57,7 +63,7 @@
                     <div class="form-group">
                         <label class="form-label">Semester</label>
                         <InputSelect @bind-Value="Course.SemesterId" class="form-control">
-                            <option value="0">Select Semester...</option>
+                            <option value="">Select Semester...</option>
                             @foreach (var sem in Semesters)
                             {
                                 <option value="@sem.Id">@sem.Name</option>
@@ -92,6 +98,7 @@
 @code {
     [SupplyParameterFromQuery] private int Id { get; set; }
     [SupplyParameterFromForm] private Course? Course { get; set; }
+
     private List<Subject> Subjects { get; set; } = new();
     private List<Semester> Semesters { get; set; } = new();
     private List<ApplicationUser> Lecturers { get; set; } = new();
@@ -99,16 +106,34 @@
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
+
+        // Load Course
         Course ??= await context.Courses.FirstOrDefaultAsync(m => m.Id == Id);
         if (Course is null) NavigationManager.NavigateTo("notfound");
 
+        // Load Related Data
         Subjects = await context.Subjects.AsNoTracking().ToListAsync();
         Semesters = await context.Semesters.AsNoTracking().ToListAsync();
+
+        // Load Lecturers based on Role
+        // Lưu ý: Đảm bảo Role "Lecture" tồn tại trong DB, nếu không dòng này sẽ trả về null
         var lecturerRole = await RoleManager.FindByNameAsync("Lecture");
         if (lecturerRole != null)
         {
-            var userIds = await context.UserRoles.Where(ur => ur.RoleId == lecturerRole.Id).Select(ur => ur.UserId).ToListAsync();
-            Lecturers = await UserManager.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
+            // Lấy danh sách User có RoleId tương ứng
+            var userIds = await context.UserRoles
+                .Where(ur => ur.RoleId == lecturerRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            Lecturers = await UserManager.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+        }
+        else
+        {
+            // Fallback: Nếu chưa có role, lấy toàn bộ user (để debug) hoặc để trống
+            Lecturers = await UserManager.Users.ToListAsync();
         }
     }
 
@@ -116,13 +141,23 @@
     {
         using var context = DbFactory.CreateDbContext();
         context.Attach(Course!).State = EntityState.Modified;
-        try { await context.SaveChangesAsync(); }
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
         catch (DbUpdateConcurrencyException)
         {
             if (!CourseExists(Course!.Id)) NavigationManager.NavigateTo("notfound");
             else throw;
         }
+
         NavigationManager.NavigateTo("/courses");
     }
-    private bool CourseExists(int id) { using var context = DbFactory.CreateDbContext(); return context.Courses.Any(e => e.Id == id); }
+
+    private bool CourseExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Courses.Any(e => e.Id == id);
+    }
 }

@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Identity
 @using SIMS.Data
 @attribute [Authorize(Roles = "Student")]
+@rendermode InteractiveServer
 @inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
@@ -15,49 +16,135 @@
     <div class="page-header">
         <div class="header-content">
             <h1>My Schedule</h1>
-            <div style="color: var(--text-muted);">Timetable for your enrolled courses</div>
+            <div class="text-muted">Weekly Timetable & Attendance Status</div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning text-dark fw-bold shadow-sm" @onclick="ToggleReport">
+                <i class="fa-solid fa-chart-pie"></i> Absence Report
+            </button>
+
+            <div class="d-flex gap-2 align-items-center bg-white p-1 rounded border shadow-sm">
+                <button class="btn btn-sm btn-light" @onclick="PrevWeek"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="fw-bold px-2" style="min-width: 120px; text-align: center;">
+                    @CurrentWeekStart.ToString("dd/MM") - @CurrentWeekEnd.ToString("dd/MM")
+                </div>
+                <button class="btn btn-sm btn-light" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
         </div>
     </div>
 
+    @if (ShowReport)
+    {
+        <div class="card-modern mb-4 border-warning" style="border-left: 5px solid #f59e0b;">
+            <h4 class="mb-3">Attendance Summary</h4>
+            @if (AbsenceStats == null)
+            {
+                <div>Loading stats...</div>
+            }
+            else if (!AbsenceStats.Any())
+            {
+                <div>No course data available.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Total Sessions</th>
+                                <th>Absent</th>
+                                <th>Absence %</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var stat in AbsenceStats)
+                            {
+                                <tr class="@(stat.Percentage > 20 ? "table-danger" : "")">
+                                    <td>@stat.CourseName</td>
+                                    <td>@stat.TotalSessions</td>
+                                    <td>@stat.AbsentSessions</td>
+                                    <td>@stat.Percentage.ToString("F1")%</td>
+                                    <td>
+                                        @if (stat.Percentage > 20)
+                                        {
+                                            <span class="badge bg-danger">Critical</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span class="badge bg-success">Good</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="text-muted small">* Warning: Absence > 20% may result in failure.</div>
+                </div>
+            }
+        </div>
+    }
+
     @if (IsLoading)
     {
-        <div style="text-align: center; padding: 4rem;">Loading...</div>
+        <div class="p-5 text-center text-muted">
+            <i class="fa-solid fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading...</p>
+        </div>
     }
-    else if (!Schedules.Any())
+    else if (!WeeklySchedules.Any())
     {
-        <div class="card-modern" style="text-align: center; padding: 3rem;">
-            <p>You have no classes scheduled.</p>
+        <div class="card-modern text-center p-5 text-muted">
+            <i class="fa-regular fa-calendar-check fa-2x mb-3"></i>
+            <p>No classes scheduled for this week.</p>
         </div>
     }
     else
     {
-        <div style="display: grid; gap: 1.5rem;">
-            @foreach (var dayGroup in Schedules.GroupBy(s => s.DayOfWeek).OrderBy(g => g.Key))
+        <div class="schedule-grid">
+            @foreach (var dayGroup in WeeklySchedules.GroupBy(s => s.Date).OrderBy(g => g.Key))
             {
-                <div class="card-modern course-card-item type-student" style="padding: 0 !important; border: 1px solid #e2e8f0;">
-                    <div class="course-card-top"></div>
-                    <div style="padding: 1.5rem;">
-                        <h3 style="margin-bottom: 1rem; color: var(--text-main); border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
-                            @dayGroup.Key
+                var isToday = dayGroup.Key == DateOnly.FromDateTime(DateTime.Now);
+                <div class="card-modern schedule-card @(isToday ? "is-today" : "")">
+                    <div class="schedule-header-strip @(isToday ? "is-today" : "")"></div>
+                    <div class="schedule-content">
+                        <h3 class="schedule-day-title">
+                            <span>@dayGroup.Key.DayOfWeek (@dayGroup.Key.ToString("dd/MM"))</span>
+                            @if (isToday)
+                            {
+                                <span class="badge bg-primary fs-6">Today</span>
+                            }
                         </h3>
 
-                        <div style="display: grid; gap: 1rem;">
+                        <div class="session-list">
                             @foreach (var item in dayGroup.OrderBy(x => x.StartTime))
                             {
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8fafc; border-radius: 12px;">
-                                    <div style="display: flex; gap: 1rem; align-items: center;">
-                                        <div style="text-align: center; min-width: 80px;">
-                                            <div style="font-weight: 700; color: #059669;">@item.StartTime.ToString("HH:mm")</div>
-                                            <div style="font-size: 0.8rem; color: var(--text-muted);">to @item.EndTime.ToString("HH:mm")</div>
+                                var isAbsent = MyAbsences.Contains(item.Id);
+
+                                <div class="session-item" style="@(isAbsent ? "background: #fff5f5; border: 1px solid #feb2b2;" : "")">
+                                    <div class="session-info-left">
+                                        <div class="time-block">
+                                            <div class="time-start">@item.StartTime.ToString("HH:mm")</div>
+                                            <div class="time-end">to @item.EndTime.ToString("HH:mm")</div>
                                         </div>
-                                        <div style="border-left: 2px solid #e2e8f0; padding-left: 1rem;">
-                                            <div style="font-weight: 600; font-size: 1.1rem;">@(item.Course?.Name ?? "Unknown Course")</div>
-                                            <div style="font-size: 0.9rem; color: var(--text-muted);">
-                                                <i class="fa-solid fa-chalkboard-user"></i> @(item.Course?.Lecture?.Name ?? "No Lecturer")
+                                        <div class="course-details">
+                                            <div class="course-name">
+                                                @(item.Course?.Name ?? "Unknown")
+                                                @if (isAbsent)
+                                                {
+                                                    <span class="badge bg-danger ms-2">ABSENT</span>
+                                                }
+                                            </div>
+                                            <div class="subject-name">
+                                                <i class="fa-solid fa-chalkboard-user"></i>
+                                                @(item.Course?.Lecture?.Name ?? "N/A")
                                             </div>
                                         </div>
                                     </div>
-                                    <div style="background: #ecfdf5; color: #059669; padding: 5px 12px; border-radius: 8px; font-weight: 600;">
+                                    <div class="room-badge">
                                         <i class="fa-solid fa-location-dot"></i> @item.Room
                                     </div>
                                 </div>
@@ -71,11 +158,30 @@
 </div>
 
 @code {
-    private List<Schedule> Schedules { get; set; } = new();
+    private List<Schedule> WeeklySchedules { get; set; } = new();
     private bool IsLoading { get; set; } = true;
+    private HashSet<int> MyAbsences { get; set; } = new();
+
+    private DateOnly CurrentWeekStart;
+    private DateOnly CurrentWeekEnd;
+
+    private bool ShowReport { get; set; } = false;
+    private List<AbsenceStat>? AbsenceStats;
 
     protected override async Task OnInitializedAsync()
     {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        int diff = (int)today.DayOfWeek - (int)DayOfWeek.Monday;
+        if (diff < 0) diff += 7;
+        CurrentWeekStart = today.AddDays(-diff);
+        CurrentWeekEnd = CurrentWeekStart.AddDays(6);
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
 
@@ -83,18 +189,78 @@
         {
             using var context = DbFactory.CreateDbContext();
 
-            var enrolledCourseIds = await context.Enrollments
+            var enrolledIds = await context.Enrollments
                 .Where(e => e.StudentId == user.Id)
                 .Select(e => e.CourseId)
                 .ToListAsync();
 
-            Schedules = await context.Schedules
-                .Include(s => s.Course)
-                .ThenInclude(c => c.Lecture)
-                .Where(s => enrolledCourseIds.Contains(s.CourseId))
+            WeeklySchedules = await context.Schedules
+                .Include(s => s.Course).ThenInclude(c => c!.Lecture)
+                .Where(s => enrolledIds.Contains(s.CourseId) &&
+                            s.Date >= CurrentWeekStart && s.Date <= CurrentWeekEnd)
+                .OrderBy(s => s.Date).ThenBy(s => s.StartTime)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var scheduleIds = WeeklySchedules.Select(s => s.Id).ToList();
+            var abs = await context.Attendances
+                .Where(a => a.StudentId == user.Id && scheduleIds.Contains(a.ScheduleId) && a.IsAbsent)
+                .Select(a => a.ScheduleId)
+                .ToListAsync();
+            MyAbsences = abs.ToHashSet();
         }
         IsLoading = false;
+    }
+
+    private async Task ToggleReport()
+    {
+        ShowReport = !ShowReport;
+        if (ShowReport && AbsenceStats == null) await LoadStats();
+    }
+
+    private async Task LoadStats()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+        if (user == null) return;
+
+        using var context = DbFactory.CreateDbContext();
+
+        var enrollments = await context.Enrollments
+            .Include(e => e.Course)
+            .Where(e => e.StudentId == user.Id)
+            .ToListAsync();
+
+        AbsenceStats = new List<AbsenceStat>();
+
+        foreach (var enroll in enrollments)
+        {
+            var total = await context.Schedules.CountAsync(s => s.CourseId == enroll.CourseId);
+            var absent = await context.Attendances
+                .Include(a => a.Schedule)
+                .CountAsync(a => a.StudentId == user.Id && a.Schedule!.CourseId == enroll.CourseId && a.IsAbsent);
+
+            if (total > 0)
+            {
+                AbsenceStats.Add(new AbsenceStat
+                {
+                    CourseName = enroll.Course?.Name ?? "Unknown",
+                    TotalSessions = total,
+                    AbsentSessions = absent
+                });
+            }
+        }
+    }
+
+    private async Task PrevWeek() { CurrentWeekStart = CurrentWeekStart.AddDays(-7); CurrentWeekEnd = CurrentWeekEnd.AddDays(-7); await LoadData(); }
+    private async Task NextWeek() { CurrentWeekStart = CurrentWeekStart.AddDays(7); CurrentWeekEnd = CurrentWeekEnd.AddDays(7); await LoadData(); }
+
+    public class AbsenceStat
+    {
+        // Fix lỗi CS8618: Khởi tạo giá trị mặc định
+        public string CourseName { get; set; } = string.Empty;
+        public int TotalSessions { get; set; }
+        public int AbsentSessions { get; set; }
+        public double Percentage => TotalSessions == 0 ? 0 : ((double)AbsentSessions / TotalSessions) * 100;
     }
 }
