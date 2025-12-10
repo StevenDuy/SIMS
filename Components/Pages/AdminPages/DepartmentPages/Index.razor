@@ -2,6 +2,8 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using SIMS.Data
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @implements IAsyncDisposable
 @inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
 

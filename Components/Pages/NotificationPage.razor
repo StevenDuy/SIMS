@@ -78,13 +78,14 @@
 @if (ShowFormModal)
 {
     <div class="modal-overlay" @onclick="CloseFormModal">
-        <div class="modal-form-box" @onclick:stopPropagation>
-            <div class="modal-form-header">
-                <h4 style="margin:0; font-weight: 700;">@(InputModel.Id == 0 ? "Create Notification" : "Edit Notification")</h4>
-                <button type="button" class="btn-close" @onclick="CloseFormModal" style="background: none; border: none; font-size: 1.5rem;">&times;</button>
-            </div>
+        @* QUAN TRỌNG: EditForm bao quanh hộp Modal để form không bị vỡ layout *@
+        <EditForm Model="InputModel" OnValidSubmit="SaveNotification" @onclick:stopPropagation>
+            <div class="modal-form-box">
+                <div class="modal-form-header">
+                    <h4 style="margin:0; font-weight: 700;">@(InputModel.Id == 0 ? "Create Notification" : "Edit Notification")</h4>
+                    <button type="button" class="btn-close" @onclick="CloseFormModal" style="background: none; border: none; font-size: 1.5rem;">&times;</button>
+                </div>
 
-            <EditForm Model="InputModel" OnValidSubmit="SaveNotification">
                 <div class="modal-form-body">
                     <DataAnnotationsValidator />
                     <ValidationSummary class="text-danger mb-3" />
@@ -97,7 +98,7 @@
 
                     <div class="form-group mb-3">
                         <label class="form-label fw-bold">Content</label>
-                        <InputTextArea @bind-Value="InputModel.Content" class="form-control" rows="6" placeholder="Enter detailed content..." />
+                        <InputTextArea @bind-Value="InputModel.Content" class="form-control" rows="10" placeholder="Enter detailed content..." style="min-height: 200px;" />
                         <ValidationMessage For="() => InputModel.Content" class="text-danger small" />
                     </div>
 
@@ -124,8 +125,8 @@
                         <i class="fa-solid fa-floppy-disk"></i> Save
                     </button>
                 </div>
-            </EditForm>
-        </div>
+            </div>
+        </EditForm>
     </div>
 }
 

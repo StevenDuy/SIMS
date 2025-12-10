@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace SIMS.Data
@@ -13,13 +13,15 @@ namespace SIMS.Data
         public DbSet<Enrollment> Enrollments { get; set; } = null!;
         public DbSet<Schedule> Schedules { get; set; } = default!;
         public DbSet<Notification> Notifications { get; set; } = null!;
-        public DbSet<Attendance> Attendances { get; set; } = null!; // Updated
+
+        // --- THÊM DÒNG NÀY ---
+        public DbSet<Attendance> Attendances { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Existing configurations
+            // Cấu hình Enrollment (Giữ nguyên cũ)
             modelBuilder.Entity<Enrollment>()
                 .HasOne(e => e.Student)
                 .WithMany()
@@ -32,8 +34,8 @@ namespace SIMS.Data
                 .HasForeignKey(e => e.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // --- FIX: ATTENDANCE CONFIGURATION ---
-            // Use Restrict to prevent SQL Cycle errors
+            // --- CẤU HÌNH ATTENDANCE (MỚI) ---
+            // Dùng Restrict để tránh lỗi "Multiple Cascade Paths"
             modelBuilder.Entity<Attendance>()
                 .HasOne(a => a.Student)
                 .WithMany()
@@ -41,10 +43,10 @@ namespace SIMS.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Attendance>()
-                .HasOne(a => a.Course)
+                .HasOne(a => a.Schedule)
                 .WithMany()
-                .HasForeignKey(a => a.CourseId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(a => a.ScheduleId)
+                .OnDelete(DeleteBehavior.Cascade); // Xóa Lịch -> Xóa luôn điểm danh của lịch đó
         }
     }
 }

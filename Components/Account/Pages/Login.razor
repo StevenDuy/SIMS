@@ -14,80 +14,72 @@
 <link rel="stylesheet" href="app.css" />
 
 <div class="app-container animate-fade-in" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
-    <div class="card-modern hover-lift" style="width: 100%; max-width: 450px; padding: 2.5rem;">
+    <div class="card-modern hover-lift" style="width: 100%; max-width: 500px; padding: 2.5rem;">
 
         <div style="text-align: center; margin-bottom: 2rem;">
             <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: white; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1rem; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">
-                <i class="fa-solid fa-lock"></i>
+                <i class="fa-solid fa-right-to-bracket"></i>
             </div>
             <h2 style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Welcome Back</h2>
             <p style="color: var(--text-muted);">Please sign in to continue</p>
         </div>
 
-        <StatusMessage Message="@errorMessage" />
+        <StatusMessage Message="@Message" />
 
         <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
             <DataAnnotationsValidator />
+            <ValidationSummary class="validation-message" role="alert" style="margin-bottom: 1rem;" />
 
-            <div class="form-group mb-3">
-                <label class="form-label">Email Address</label>
-                <div style="position: relative;">
-                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="name@example.com" style="padding-left: 2.5rem;" />
-                    <i class="fa-solid fa-envelope" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+            <div class="form-grid" style="grid-template-columns: 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div style="position: relative;">
+                        <InputText @bind-Value="Input.Email" class="form-control" placeholder="name@example.com" autocomplete="username" style="padding-left: 2.5rem;" />
+                        <i class="fa-solid fa-envelope" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+                    </div>
+                    <ValidationMessage For="() => Input.Email" class="validation-message" />
                 </div>
-                <ValidationMessage For="() => Input.Email" class="validation-message" />
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label class="form-label" style="margin-bottom: 0;">Password</label>
+                        <a href="Account/ForgotPassword" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot?</a>
+                    </div>
+                    <div style="position: relative;">
+                        <InputText type="password" @bind-Value="Input.Password" class="form-control" placeholder="••••••••" autocomplete="current-password" style="padding-left: 2.5rem;" />
+                        <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+                    </div>
+                    <ValidationMessage For="() => Input.Password" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <InputCheckbox @bind-Value="Input.RememberMe" id="rememberMe" style="width: 18px; height: 18px; accent-color: var(--primary);" />
+                        <label for="rememberMe" style="font-size: 0.95rem; color: var(--text-main); cursor: pointer;">Remember me</label>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group mb-3">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <label class="form-label" style="margin-bottom: 0;">Password</label>
-                    <a href="Account/ForgotPassword" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot?</a>
-                </div>
-                <div style="position: relative;">
-                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="••••••••" style="padding-left: 2.5rem;" />
-                    <i class="fa-solid fa-key" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
-                </div>
-                <ValidationMessage For="() => Input.Password" class="validation-message" />
-            </div>
-
-            <div class="form-group mb-4">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); font-size: 0.95rem;">
-                    <InputCheckbox @bind-Value="Input.RememberMe" style="width: 18px; height: 18px; accent-color: var(--primary);" />
-                    Remember me
-                </label>
-            </div>
-
-            <button type="submit" class="btn btn-primary hover-lift" style="width: 100%; padding: 0.8rem; font-size: 1rem; justify-content: center;">
+            <button type="submit" class="btn btn-primary hover-lift" style="width: 100%; padding: 0.8rem; font-size: 1rem; justify-content: center; margin-top: 1.5rem;">
                 Sign In
             </button>
 
             <div style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem; color: var(--text-muted);">
                 Don't have an account?
-                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" style="color: var(--primary); font-weight: 600; text-decoration: none;">Register</a>
+                <a href="Account/Register" style="color: var(--primary); font-weight: 600; text-decoration: none;">Register</a>
             </div>
         </EditForm>
     </div>
 </div>
 
 @code {
-    private string? errorMessage;
-
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-        }
-    }
+    private string? Message { get; set; }
 
     public async Task LoginUser()
     {
@@ -95,11 +87,13 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo("/");
+            RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
         {
-            RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+            RedirectManager.RedirectTo(
+                "Account/LoginWith2fa",
+                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
         else if (result.IsLockedOut)
         {
@@ -108,7 +102,7 @@
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            Message = "Error: Invalid login attempt.";
         }
     }
 

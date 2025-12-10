@@ -8,41 +8,57 @@
 <link rel="stylesheet" href="app.css" />
 
 <div class="app-container animate-fade-in">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Edit Semester</h1>
+            <div style="color: var(--text-muted);">Update academic term details</div>
+        </div>
+        <a href="/semesters" class="btn btn-secondary hover-lift">
+            <i class="fa-solid fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
     @if (Semester is null)
     {
-        <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
-            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
-            <p>Loading...</p>
-        </div>
+        <div class="text-center p-5">Loading...</div>
     }
     else
     {
-        <div class="page-header">
-            <div class="header-content">
-                <h1>Edit Semester</h1>
-                <div style="color: var(--text-muted);">Update details for <strong>@Semester.Name</strong></div>
-            </div>
-            <a href="/semesters" class="btn btn-secondary hover-lift">
-                <i class="fa-solid fa-arrow-left"></i> Back to List
-            </a>
-        </div>
-
         <div class="card-modern hover-lift">
             <EditForm method="post" Model="Semester" OnValidSubmit="UpdateSemester" FormName="edit" Enhance>
                 <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
                 <input type="hidden" name="Semester.Id" value="@Semester.Id" />
 
                 <div class="form-grid">
-                    <div class="form-group form-full">
-                        <label class="form-label">Semester Name <span style="color:var(--danger)">*</span></label>
+                    <div class="form-group">
+                        <label class="form-label">Semester Name <span class="text-danger">*</span></label>
                         <InputText @bind-Value="Semester.Name" class="form-control" />
-                        <ValidationMessage For="() => Semester.Name" class="validation-message" />
+                        <ValidationMessage For="() => Semester.Name" class="text-danger" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Semester Code <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="Semester.Code" class="form-control" />
+                        <ValidationMessage For="() => Semester.Code" class="text-danger" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                        <InputDate @bind-Value="Semester.StartDate" class="form-control" />
+                        <ValidationMessage For="() => Semester.StartDate" class="text-danger" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">End Date <span class="text-danger">*</span></label>
+                        <InputDate @bind-Value="Semester.EndDate" class="form-control" />
+                        <ValidationMessage For="() => Semester.EndDate" class="text-danger" />
                     </div>
                 </div>
 
                 <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
-                    <button type="submit" class="btn btn-primary hover-lift" style="min-width: 160px;">
-                        <i class="fa-solid fa-save"></i> Save Changes
+                    <button type="submit" class="btn btn-primary hover-lift">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
                     </button>
                 </div>
             </EditForm>
@@ -51,27 +67,50 @@
 </div>
 
 @code {
-    [SupplyParameterFromQuery] private int Id { get; set; }
-    [SupplyParameterFromForm] private Semester? Semester { get; set; }
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Semester? Semester { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
         Semester ??= await context.Semesters.FirstOrDefaultAsync(m => m.Id == Id);
-        if (Semester is null) NavigationManager.NavigateTo("notfound");
+
+        if (Semester is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
     }
 
     private async Task UpdateSemester()
     {
         using var context = DbFactory.CreateDbContext();
         context.Attach(Semester!).State = EntityState.Modified;
-        try { await context.SaveChangesAsync(); }
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
         catch (DbUpdateConcurrencyException)
         {
-            if (!SemesterExists(Semester!.Id)) NavigationManager.NavigateTo("notfound");
-            else throw;
+            if (!SemesterExists(Semester!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
         }
+
         NavigationManager.NavigateTo("/semesters");
     }
-    private bool SemesterExists(int id) { using var context = DbFactory.CreateDbContext(); return context.Semesters.Any(e => e.Id == id); }
+
+    private bool SemesterExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Semesters.Any(e => e.Id == id);
+    }
 }

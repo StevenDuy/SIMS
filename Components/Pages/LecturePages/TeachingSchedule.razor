@@ -16,35 +16,46 @@
     <div class="page-header">
         <div class="header-content">
             <h1>Teaching Schedule</h1>
-            <div style="color: var(--text-muted);">Your upcoming classes (Past days in the current week are hidden)</div>
+            <div class="text-muted">Manage your classes and attendance</div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center bg-white p-2 rounded border shadow-sm">
+            <button class="btn btn-sm btn-light" @onclick="PrevWeek"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="fw-bold px-2" style="min-width: 150px; text-align: center;">
+                @CurrentWeekStart.ToString("dd/MM") - @CurrentWeekEnd.ToString("dd/MM")
+            </div>
+            <button class="btn btn-sm btn-light" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
     </div>
 
     @if (IsLoading)
     {
-        <div class="schedule-loading">Loading schedule data...</div>
+        <div class="p-5 text-center text-muted">
+            <i class="fa-solid fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading...</p>
+        </div>
     }
-    else if (!FilteredSchedules.Any())
+    else if (!WeeklySchedules.Any())
     {
-        <div class="card-modern schedule-empty">
-            <p>No upcoming classes found for this week.</p>
+        <div class="card-modern text-center p-5 text-muted">
+            <i class="fa-solid fa-calendar-minus fa-2x mb-3"></i>
+            <p>No classes scheduled for this week.</p>
         </div>
     }
     else
     {
         <div class="schedule-grid">
-            @foreach (var dayGroup in FilteredSchedules.GroupBy(s => s.DayOfWeek).OrderBy(g => GetDayIndex(g.Key)))
+            @foreach (var dayGroup in WeeklySchedules.GroupBy(s => s.Date).OrderBy(g => g.Key))
             {
-                var isToday = dayGroup.Key == DateTime.Now.DayOfWeek;
-
-                <div class="schedule-card @(isToday ? "is-today" : "")">
+                var isToday = dayGroup.Key == DateOnly.FromDateTime(DateTime.Now);
+                <div class="card-modern schedule-card @(isToday ? "is-today" : "")">
                     <div class="schedule-header-strip @(isToday ? "is-today" : "")"></div>
                     <div class="schedule-content">
                         <h3 class="schedule-day-title">
-                            <span>@dayGroup.Key</span>
+                            <span>@dayGroup.Key.DayOfWeek (@dayGroup.Key.ToString("dd/MM"))</span>
                             @if (isToday)
                             {
-                                <span class="badge bg-primary" style="font-size: 0.8rem;">Today</span>
+                                <span class="badge bg-primary fs-6">Today</span>
                             }
                         </h3>
 
@@ -58,9 +69,9 @@
                                             <div class="time-end">to @item.EndTime.ToString("HH:mm")</div>
                                         </div>
                                         <div class="course-details">
-                                            <div class="course-name">@(item.Course?.Name ?? "Unknown Course")</div>
+                                            <div class="course-name">@(item.Course?.Name ?? "Unknown")</div>
                                             <div class="subject-name">
-                                                <i class="fa-solid fa-layer-group"></i> @(item.Course?.Subject?.Name ?? "No Subject")
+                                                <i class="fa-solid fa-code"></i> @(item.Course?.Code ?? "No Code")
                                             </div>
                                         </div>
                                     </div>
@@ -72,9 +83,14 @@
 
                                         @if (isToday)
                                         {
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenAttendanceModal(item)">
-                                                <i class="fa-solid fa-clipboard-user"></i> Attendance
+                                            <button class="btn btn-sm btn-outline-primary shadow-sm" @onclick="() => OpenAttendanceModal(item)">
+                                                <i class="fa-solid fa-clipboard-user"></i>
+                                                @(item.IsAttendanceTaken ? "Edit Attendance" : "Take Attendance")
                                             </button>
+                                        }
+                                        else if (item.IsAttendanceTaken)
+                                        {
+                                            <span class="badge bg-success shadow-sm">Completed</span>
                                         }
                                     </div>
                                 </div>
@@ -91,16 +107,23 @@
 {
     <div class="modal-backdrop-custom">
         <div class="modal-content-custom">
-            <h3>Attendance: @SelectedSchedule?.Course?.Name</h3>
-            <p class="text-muted">Please tick the checkbox for students who are <strong>ABSENT</strong>.</p>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0">Attendance Check</h5>
+                <button class="btn-close" @onclick="CloseModal"></button>
+            </div>
+
+            <div class="alert alert-light border shadow-sm mb-3">
+                <strong>@SelectedSchedule?.Course?.Name</strong><br />
+                <small>@SelectedSchedule?.Date.ToString("dd/MM/yyyy") | @SelectedSchedule?.StartTime - @SelectedSchedule?.EndTime</small>
+            </div>
 
             @if (ClassEnrollments == null)
             {
-                <div class="text-center py-3">Loading student list...</div>
+                <div class="text-center py-3">Loading students...</div>
             }
             else if (!ClassEnrollments.Any())
             {
-                <div class="alert alert-info">No students enrolled in this course.</div>
+                <div class="alert alert-warning">No students found.</div>
             }
             else
             {
@@ -108,105 +131,103 @@
                     @foreach (var enroll in ClassEnrollments)
                     {
                         var isAbsent = Absences.Contains(enroll.StudentId);
-                        <div class="student-attendance-item">
+                        <div class="d-flex justify-content-between align-items-center p-2 border rounded mb-2 @(isAbsent ? "bg-danger-subtle border-danger" : "bg-white")">
                             <div>
-                                <strong>@enroll.Student?.UserName</strong> <br />
-                                <span class="text-muted small">@enroll.Student?.Email</span>
+                                <div class="fw-bold">@enroll.Student?.Name</div>
+                                <div class="small text-muted">@enroll.Student?.Email</div>
                             </div>
-                            <input type="checkbox" class="checkbox-lg"
-                                   checked="@isAbsent"
-                                   @onchange="(e) => ToggleAbsence(enroll.StudentId, e.Value)" />
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked="@isAbsent"
+                                       @onchange="(e) => ToggleAbsence(enroll.StudentId, e.Value)" />
+                                <label class="form-check-label small fw-bold @(isAbsent ? "text-danger" : "text-muted")">
+                                    @(isAbsent ? "Absent" : "Present")
+                                </label>
+                            </div>
                         </div>
                     }
                 </div>
             }
 
-            <div class="modal-footer">
+            <div class="modal-footer pt-3 mt-0 border-top">
                 <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                <button class="btn btn-primary" @onclick="SaveAttendance">Confirm & Save</button>
+                <button class="btn btn-primary" @onclick="SaveAttendance">Save</button>
             </div>
         </div>
     </div>
 }
 
 @code {
-    private List<Schedule> Schedules { get; set; } = new();
-    private List<Schedule> FilteredSchedules { get; set; } = new();
+    private List<Schedule> WeeklySchedules { get; set; } = new();
     private bool IsLoading { get; set; } = true;
+    private DateOnly CurrentWeekStart;
+    private DateOnly CurrentWeekEnd;
 
-    // Modal Variables
-    private bool ShowModal { get; set; } = false;
-    private Schedule? SelectedSchedule { get; set; }
-    private List<Enrollment>? ClassEnrollments { get; set; } = new();
-    private HashSet<string> Absences { get; set; } = new();
+    private bool ShowModal = false;
+    private Schedule? SelectedSchedule;
+    private List<Enrollment>? ClassEnrollments;
+    private HashSet<string> Absences = new();
 
     protected override async Task OnInitializedAsync()
     {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        int diff = (int)today.DayOfWeek - (int)DayOfWeek.Monday;
+        if (diff < 0) diff += 7;
+        CurrentWeekStart = today.AddDays(-diff);
+        CurrentWeekEnd = CurrentWeekStart.AddDays(6);
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
 
         if (user != null)
         {
             using var context = DbFactory.CreateDbContext();
-            Schedules = await context.Schedules
+            WeeklySchedules = await context.Schedules
                 .Include(s => s.Course)
-                .ThenInclude(c => c.Subject)
-                .Where(s => s.Course.LectureId == user.Id)
+                .Where(s => s.Course!.LectureId == user.Id &&
+                            s.Date >= CurrentWeekStart && s.Date <= CurrentWeekEnd)
+                .OrderBy(s => s.Date).ThenBy(s => s.StartTime)
                 .AsNoTracking()
                 .ToListAsync();
-
-            // Filter: Hide past days in current week
-            var todayIndex = GetDayIndex(DateTime.Now.DayOfWeek);
-
-            FilteredSchedules = Schedules
-                .Where(s => GetDayIndex(s.DayOfWeek) >= todayIndex)
-                .ToList();
         }
         IsLoading = false;
     }
 
-    private int GetDayIndex(DayOfWeek day)
-    {
-        // Treat Sunday as index 7 (End of week)
-        return day == DayOfWeek.Sunday ? 7 : (int)day;
-    }
+    private async Task PrevWeek() { CurrentWeekStart = CurrentWeekStart.AddDays(-7); CurrentWeekEnd = CurrentWeekEnd.AddDays(-7); await LoadData(); }
+    private async Task NextWeek() { CurrentWeekStart = CurrentWeekStart.AddDays(7); CurrentWeekEnd = CurrentWeekEnd.AddDays(7); await LoadData(); }
 
     private async Task OpenAttendanceModal(Schedule schedule)
     {
         SelectedSchedule = schedule;
         ShowModal = true;
         Absences.Clear();
-        ClassEnrollments = null; // Shows loading state in modal
+        ClassEnrollments = null;
 
         using var context = DbFactory.CreateDbContext();
 
-        // Fetch students ordered by name
         ClassEnrollments = await context.Enrollments
             .Include(e => e.Student)
             .Where(e => e.CourseId == schedule.CourseId)
-            .OrderBy(e => e.Student.UserName)
+            .OrderBy(e => e.Student!.Name) // Thêm ! để fix null warning
             .ToListAsync();
 
-        // Load existing absences for today to pre-fill the form
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        var existingAbsences = await context.Attendances
-            .Where(a => a.CourseId == schedule.CourseId && a.Date == today && a.IsAbsent)
+        var existing = await context.Attendances
+            .Where(a => a.ScheduleId == schedule.Id && a.IsAbsent)
             .Select(a => a.StudentId)
             .ToListAsync();
 
-        foreach (var id in existingAbsences) Absences.Add(id);
+        foreach (var id in existing) Absences.Add(id);
     }
 
     private void ToggleAbsence(string studentId, object? isChecked)
     {
-        if (isChecked is bool checkedVal && checkedVal)
-        {
-            Absences.Add(studentId);
-        }
-        else
-        {
-            Absences.Remove(studentId);
-        }
+        if (isChecked is bool v && v) Absences.Add(studentId);
+        else Absences.Remove(studentId);
     }
 
     private void CloseModal() => ShowModal = false;
@@ -214,33 +235,27 @@
     private async Task SaveAttendance()
     {
         if (SelectedSchedule == null) return;
-
         using var context = DbFactory.CreateDbContext();
-        var today = DateOnly.FromDateTime(DateTime.Now);
 
-        // 1. Clear old attendance records for today to avoid duplicates
-        var oldRecords = await context.Attendances
-            .Where(a => a.CourseId == SelectedSchedule.CourseId && a.Date == today)
-            .ToListAsync();
-        context.Attendances.RemoveRange(oldRecords);
+        var scheduleDb = await context.Schedules.FindAsync(SelectedSchedule.Id);
+        if (scheduleDb != null) scheduleDb.IsAttendanceTaken = true;
 
-        // 2. Add only the students marked as Absent
-        if (Absences.Any())
+        var old = await context.Attendances.Where(a => a.ScheduleId == SelectedSchedule.Id).ToListAsync();
+        context.Attendances.RemoveRange(old);
+
+        foreach (var id in Absences)
         {
-            foreach (var studentId in Absences)
+            context.Attendances.Add(new Attendance
             {
-                context.Attendances.Add(new Attendance
-                {
-                    CourseId = SelectedSchedule.CourseId,
-                    StudentId = studentId,
-                    Date = today,
-                    IsAbsent = true,
-                    Note = "Absent (Confirmed by Lecturer)"
-                });
-            }
+                ScheduleId = SelectedSchedule.Id,
+                StudentId = id,
+                IsAbsent = true,
+                Note = "Lecture Marked"
+            });
         }
 
         await context.SaveChangesAsync();
         ShowModal = false;
+        await LoadData();
     }
 }

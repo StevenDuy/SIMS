@@ -14,7 +14,7 @@
     --danger: #ef4444;
     --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     --border-radius: 16px;
-    /* Shadows - Giữ lại shadow tĩnh để tạo độ sâu, bỏ shadow hover quá mức */
+    /* Shadows */
     --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
     --shadow-3d: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
@@ -52,7 +52,6 @@ a {
     }
 }
 
-/* Chỉ dùng cho các nút bấm cần tương tác, không dùng cho container lớn */
 .hover-lift {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -72,7 +71,7 @@ a {
 .page-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end; /* Căn chỉnh đáy để text thẳng hàng */
+    align-items: flex-end;
     margin-bottom: 2rem;
 }
 
@@ -86,7 +85,6 @@ a {
     filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.2));
 }
 
-/* Style mới cho Active Courses dạng text */
 .stat-text {
     color: var(--text-muted);
     font-size: 0.95rem;
@@ -94,7 +92,7 @@ a {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-bottom: 5px; /* Để căn chỉnh đẹp với nút bên cạnh */
+    padding-bottom: 5px;
 }
 
     .stat-text i {
@@ -113,14 +111,13 @@ a {
     overflow: hidden;
 }
 
-/* 5. TABLE CONTAINER - Bỏ hover effect */
+/* 5. TABLE CONTAINER */
 .table-container {
     background: var(--bg-surface);
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-3d); /* Shadow tĩnh, không đổi khi hover */
+    box-shadow: var(--shadow-3d);
     overflow: hidden;
     border: 1px solid rgba(226, 232, 240, 0.6);
-    /* Không có transition transform ở đây */
 }
 
 table {
@@ -147,7 +144,6 @@ tbody td {
     vertical-align: middle;
 }
 
-    /* Text trong bảng */
     tbody td span, tbody td div {
         color: var(--text-main);
         font-weight: 500;
@@ -160,7 +156,6 @@ tbody tr:last-child td {
 tbody tr:hover td {
     background: #f8fafc;
 }
-/* Chỉ đổi màu nền nhẹ, không scale */
 
 /* 6. BUTTONS */
 .btn {
@@ -213,7 +208,6 @@ tbody tr:hover td {
         box-shadow: 0 10px 15px rgba(239, 68, 68, 0.4);
     }
 
-/* Action Buttons - Vẫn giữ hover cho nút nhỏ để biết là click được */
 .btn-icon {
     width: 38px;
     height: 38px;
@@ -285,17 +279,14 @@ tbody tr:hover td {
    Lecture va Student (Dùng chung)
    ========================================= */
 
-/* 1. Layout Lưới (Grid) - Đảm bảo khoảng cách đều */
 .course-grid-layout {
     display: grid;
-    /* Tự động chia cột, tối thiểu 300px, tự giãn */
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem; /* Khoảng cách giữa các thẻ (ngang & dọc) */
+    gap: 2rem;
     margin-top: 1.5rem;
     padding-bottom: 2rem;
 }
 
-/* 2. Card Cơ bản */
 .course-card-item {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -303,25 +294,22 @@ tbody tr:hover td {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: 100%; /* Để các thẻ cao bằng nhau */
+    height: 100%;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
 }
 
-    /* Hiệu ứng Hover: Nổi lên & Bóng đổ */
     .course-card-item:hover {
         transform: translateY(-5px);
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         border-color: transparent;
     }
 
-/* 3. Dải màu trang trí trên đầu (Top Bar) */
 .course-card-top {
     height: 6px;
     width: 100%;
 }
 
-/* Modifier: Màu cho Giảng viên (Tím) */
 .course-card-item.type-lecturer .course-card-top {
     background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
 }
@@ -331,7 +319,6 @@ tbody tr:hover td {
     color: #4338ca;
 }
 
-/* Modifier: Màu cho Sinh viên (Xanh lá) */
 .course-card-item.type-student .course-card-top {
     background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
 }
@@ -341,10 +328,9 @@ tbody tr:hover td {
     color: #059669;
 }
 
-/* 4. Nội dung bên trong thẻ */
 .course-card-body {
     padding: 1.5rem;
-    flex: 1; /* Đẩy footer xuống đáy */
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -395,7 +381,7 @@ tbody tr:hover td {
 }
 
 .course-stats {
-    margin-top: auto; /* Đẩy xuống sát footer */
+    margin-top: auto;
     padding-top: 1rem;
     border-top: 1px solid #f1f5f9;
     font-size: 0.9rem;
@@ -405,7 +391,6 @@ tbody tr:hover td {
     gap: 8px;
 }
 
-/* 5. Footer (Nút hành động) */
 .course-card-footer {
     background: #f8fafc;
     padding: 1rem 1.5rem;
@@ -422,7 +407,6 @@ tbody tr:hover td {
     transition: all 0.2s;
 }
 
-/* Link màu theo theme */
 .type-lecturer .course-link {
     color: #4f46e5;
 }
@@ -435,21 +419,18 @@ tbody tr:hover td {
     opacity: 0.8;
 }
 
-/* --- NEW HOME PAGE STYLES (RE-DESIGN) --- */
-
-/* 1. Container chính: Căn giữa màn hình, giới hạn độ rộng để không bị bè */
+/* --- NEW HOME PAGE STYLES --- */
 .home-container {
-    max-width: 1200px; /* Độ rộng chuẩn đẹp */
-    margin: 0 auto; /* Tự động căn giữa trái phải */
-    padding: 3rem 1.5rem; /* Khoảng cách trong lớn cho thoáng */
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 3rem; /* Khoảng cách giữa các khối nội dung lớn (Header - Grid - News) */
+    gap: 3rem;
 }
 
-/* 2. Header Dashboard (Chào mừng) */
 .home-header {
-    text-align: center; /* Căn giữa nội dung chào mừng */
+    text-align: center;
     margin-bottom: 1rem;
 }
 
@@ -466,40 +447,38 @@ tbody tr:hover td {
     color: var(--text-muted);
 }
 
-/* 3. Lưới thẻ chức năng (Grid System) */
 .home-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Tự động chia cột, tối thiểu 320px/thẻ */
-    gap: 2.5rem; /* Khoảng cách giữa các thẻ RẤT RỘNG như bạn yêu cầu */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2.5rem;
     justify-content: center;
 }
 
-/* 4. Thẻ Card được thiết kế lại cho thoáng */
 .home-card {
     background: #fff;
     border-radius: 20px;
-    padding: 0; /* Reset padding để header màu tràn viền */
+    padding: 0;
     box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
     border: 1px solid #f1f5f9;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Bo góc cho header màu */
+    overflow: hidden;
     height: 100%;
 }
 
     .home-card:hover {
-        transform: translateY(-8px); /* Bay lên cao hơn chút */
+        transform: translateY(-8px);
         box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
     }
 
 .home-card-header {
-    height: 8px; /* Thanh màu trang trí bên trên */
+    height: 8px;
     width: 100%;
 }
 
 .home-card-body {
-    padding: 2.5rem 2rem; /* Nội dung bên trong thẻ cách xa viền */
+    padding: 2.5rem 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -532,7 +511,7 @@ tbody tr:hover td {
 }
 
 .home-btn {
-    margin-top: auto; /* Đẩy nút xuống đáy */
+    margin-top: auto;
     padding: 0.8rem 2rem;
     border-radius: 50px;
     font-weight: 600;
@@ -541,9 +520,8 @@ tbody tr:hover td {
     display: inline-block;
 }
 
-/* 5. Giao diện khách (Landing Page) */
 .landing-hero {
-    min-height: 70vh; /* Chiếm 70% chiều cao màn hình */
+    min-height: 70vh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -575,8 +553,7 @@ tbody tr:hover td {
     max-width: 250px;
 }
 
-/* --- NOTIFICATION BELL STYLES (UPDATED) --- */
-
+/* --- NOTIFICATION BELL STYLES --- */
 .notification-wrapper {
     position: relative;
     display: inline-flex;
@@ -622,12 +599,11 @@ tbody tr:hover td {
     box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
-/* POPUP FIXED: Chỉnh lại width và right để không bị che */
 .notification-popup {
     position: absolute;
     top: 120%;
-    right: 0; /* Căn thẳng lề phải với nút chuông */
-    width: 300px; /* Thu nhỏ chiều rộng lại một chút (300px là chuẩn) */
+    right: 0;
+    width: 360px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
@@ -674,7 +650,7 @@ tbody tr:hover td {
     color: #334155;
     margin-bottom: 2px;
     display: -webkit-box;
-    -webkit-line-clamp: 1; /* Chỉ hiện 1 dòng tiêu đề cho gọn */
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -687,17 +663,15 @@ tbody tr:hover td {
     gap: 4px;
 }
 
-/* FOOTER FIXED: Căn giữa nút */
 .notif-footer {
     padding: 10px;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
-    display: flex; /* Dùng Flexbox */
-    justify-content: center; /* Căn giữa ngang */
+    display: flex;
+    justify-content: center;
     align-items: center;
 }
 
-/* Nút tạo nhỏ gọn hơn */
 .btn-create-notif {
     padding: 6px 20px;
     font-size: 0.8rem;
@@ -716,12 +690,7 @@ tbody tr:hover td {
         transform: translateY(-1px);
     }
 
-/* Overlay cho Modal Xác nhận Xóa (Mới) */
-/* --- NEW DELETE MODAL STYLES --- */
-
-/* --- APP.CSS: Thêm vào cuối file --- */
-
-/* Modal Backdrop (Nền đen dùng chung) */
+/* --- MODAL OVERLAY & BOX --- */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -736,7 +705,6 @@ tbody tr:hover td {
     backdrop-filter: blur(3px);
 }
 
-/* Modal Xóa (Nhỏ) */
 .modal-confirm-box {
     background: white;
     padding: 2rem;
@@ -748,16 +716,19 @@ tbody tr:hover td {
     animation: zoomIn 0.2s ease-out;
 }
 
-/* MODAL FORM (TO - Dùng cho Create/Edit) */
 .modal-form-box {
     background: white;
     width: 95%;
-    max-width: 700px; /* Rộng hơn */
+    
+    /* --- SỬA DÒNG NÀY --- */
+    max-width: 1000px; /* Tăng từ 700px lên 1000px cho rộng rãi */
+    /* ------------------- */
+    
     border-radius: 16px;
     box-shadow: 0 25px 60px rgba(0,0,0,0.4);
     display: flex;
     flex-direction: column;
-    max-height: 90vh; /* Không quá chiều cao màn hình */
+    max-height: 90vh;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -769,11 +740,13 @@ tbody tr:hover td {
     align-items: center;
     background: #f8fafc;
     border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
 }
 
 .modal-form-body {
     padding: 1.5rem;
-    overflow-y: auto; /* Cuộn nếu form dài */
+    overflow-y: auto;
+    flex-grow: 1;
 }
 
 .modal-form-footer {
@@ -782,6 +755,7 @@ tbody tr:hover td {
     background: #fff;
     border-radius: 0 0 16px 16px;
     text-align: right;
+    flex-shrink: 0;
 }
 
 @keyframes slideUp {
@@ -808,7 +782,7 @@ tbody tr:hover td {
     }
 }
 
-/* --- Teaching Schedule & Attendance Styles --- */
+/* --- SCHEDULE STYLES --- */
 .schedule-loading,
 .schedule-empty {
     text-align: center;
@@ -821,7 +795,6 @@ tbody tr:hover td {
     gap: 1.5rem;
 }
 
-/* Card customizations */
 .schedule-card {
     padding: 0 !important;
     border: 1px solid #e2e8f0;
@@ -929,7 +902,7 @@ tbody tr:hover td {
     font-size: 0.9rem;
 }
 
-/* --- Modal Styles --- */
+/* --- MODAL ATTENDANCE --- */
 .modal-backdrop-custom {
     position: fixed;
     top: 0;
@@ -1000,3 +973,22 @@ tbody tr:hover td {
         opacity: 1;
     }
 }
+
+/* Custom Navbar Brand Style - Modern White */
+.navbar-brand {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important; /* Màu trắng tuyệt đối */
+
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    /* Bóng đổ nhẹ màu trắng để tạo độ sâu trên nền tối */
+    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.15);
+}
+
+    .navbar-brand:hover {
+        transform: scale(1.05); /* Hiệu ứng phóng to nhẹ khi di chuột */
+        /* Hiệu ứng phát sáng màu trắng khi hover */
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+    }

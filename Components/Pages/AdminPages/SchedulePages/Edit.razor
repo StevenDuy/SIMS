@@ -3,71 +3,123 @@
 @using SIMS.Data
 @inject IDbContextFactory<SIMS.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
 <PageTitle>Edit Schedule</PageTitle>
 <link rel="stylesheet" href="app.css" />
 
 <div class="app-container animate-fade-in">
-    @if (Schedule is null)
+    @if (IsLoading)
     {
-        <div style="text-align:center; padding:4rem;">Loading...</div>
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading schedule data...</p>
+        </div>
+    }
+    else if (Schedule == null)
+    {
+        <div class="alert alert-danger shadow-sm">
+            <h4><i class="fa-solid fa-triangle-exclamation"></i> Schedule Not Found</h4>
+            <p>Could not find schedule with ID: <strong>@Id</strong></p>
+            <a href="/schedules" class="btn btn-secondary">Back to List</a>
+        </div>
     }
     else
     {
         <div class="page-header">
             <div class="header-content">
-                <h1>Edit Schedule</h1>
-                <div style="color: var(--text-muted);">Update timetable details</div>
+                <h1>Edit Session</h1>
+                <div class="text-muted">Update details for this class session</div>
             </div>
             <a href="/schedules" class="btn btn-secondary hover-lift">
                 <i class="fa-solid fa-arrow-left"></i> Back to List
             </a>
         </div>
 
-        <div class="card-modern hover-lift">
-            <EditForm method="post" Model="Schedule" OnValidSubmit="UpdateSchedule" FormName="edit_schedule" Enhance>
+        <div class="card-modern shadow-sm">
+            <EditForm Model="Schedule" OnValidSubmit="UpdateSchedule">
                 <DataAnnotationsValidator />
-                <input type="hidden" name="Schedule.Id" value="@Schedule.Id" />
 
-                <div class="form-grid">
-                    <div class="form-group form-full">
-                        <label class="form-label">Course</label>
-                        <InputSelect @bind-Value="Schedule.CourseId" class="form-select">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning border-warning d-flex align-items-center gap-3">
+                            <i class="fa-regular fa-calendar-check fa-2x"></i>
+                            <div>
+                                <div>Current Date: <strong>@Schedule.Date.ToString("dd/MM/yyyy")</strong> (@Schedule.Date.DayOfWeek)</div>
+                                <small>Belongs to Week: <strong>@CurrentWeekNum</strong></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Course</label>
+                        <InputSelect Value="Schedule.CourseId"
+                                     ValueExpression="() => Schedule.CourseId"
+                                     ValueChanged="(int id) => OnCourseChanged(id)"
+                                     class="form-select">
+                            <option value="0">-- Select Course --</option>
                             @foreach (var c in Courses)
                             {
-                                <option value="@c.Id">@c.Name (@c.Subject?.Name)</option>
+                                <option value="@c.Id">@c.Name (@c.Code)</option>
                             }
                         </InputSelect>
+                        <ValidationMessage For="() => Schedule.CourseId" class="text-danger" />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Room</label>
-                        <InputText @bind-Value="Schedule.Room" class="form-control" />
+                    @if (SemesterStartDate != default)
+                    {
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Move to Week</label>
+                            <select class="form-select" value="@SelectedWeekIndex" @onchange="OnWeekChanged">
+                                @for (int i = 0; i < TotalWeeks; i++)
+                                {
+                                    var wStart = SemesterStartDate.AddDays(i * 7);
+                                    var wEnd = wStart.AddDays(6);
+                                    <option value="@i">Week @(i + 1) (@wStart.ToString("dd/MM") - @wEnd.ToString("dd/MM"))</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Day of Week</label>
+                            <select class="form-select" value="@((int)SelectedDayOfWeek)" @onchange="OnDayChanged">
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                                <option value="0">Sunday</option>
+                            </select>
+                        </div>
+                    }
+
+                    <div class="col-md-12">
+                        <label class="form-label text-muted small">New Date (Auto-calculated):</label>
+                        <input type="text" class="form-control bg-light fw-bold" value="@Schedule.Date.ToString("dd/MM/yyyy")" readonly />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Day of Week</label>
-                        <InputSelect @bind-Value="Schedule.DayOfWeek" class="form-select">
-                            @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
-                            {
-                                <option value="@day">@day</option>
-                            }
-                        </InputSelect>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Start Time</label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Start Time</label>
                         <InputDate Type="InputDateType.Time" @bind-Value="Schedule.StartTime" class="form-control" />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">End Time</label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">End Time</label>
                         <InputDate Type="InputDateType.Time" @bind-Value="Schedule.EndTime" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Room</label>
+                        <InputText @bind-Value="Schedule.Room" class="form-control" />
                     </div>
                 </div>
 
-                <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
-                    <button type="submit" class="btn btn-primary hover-lift">
+                <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                    <a href="/schedules" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">
                         <i class="fa-solid fa-floppy-disk"></i> Save Changes
                     </button>
                 </div>
@@ -77,30 +129,149 @@
 </div>
 
 @code {
-    [SupplyParameterFromQuery] private int Id { get; set; }
-    [SupplyParameterFromForm] private Schedule? Schedule { get; set; }
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    // Không dùng [SupplyParameterFromForm] để tránh xung đột với Interactive mode
+    private Schedule? Schedule { get; set; }
+
     private List<Course> Courses { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    // Logic Variables
+    private DateOnly SemesterStartDate { get; set; }
+    private int TotalWeeks { get; set; }
+    private int CurrentWeekNum { get; set; }
+    private int SelectedWeekIndex { get; set; }
+    private DayOfWeek SelectedDayOfWeek { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        Schedule ??= await context.Schedules.FirstOrDefaultAsync(m => m.Id == Id);
-        Courses = await context.Courses.Include(c => c.Subject).ToListAsync();
 
-        if (Schedule is null) NavigationManager.NavigateTo("notfound");
+        // 1. Load Courses
+        Courses = await context.Courses
+            .Include(c => c.Semester)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        // 2. Load Schedule
+        Schedule = await context.Schedules.FirstOrDefaultAsync(s => s.Id == Id);
+
+        // 3. Tính toán UI
+        if (Schedule != null)
+        {
+            // Tìm Course của lịch này để lấy thông tin Semester
+            var relatedCourse = Courses.FirstOrDefault(c => c.Id == Schedule.CourseId);
+            if (relatedCourse?.Semester != null)
+            {
+                SetupSemesterInfo(relatedCourse.Semester);
+            }
+        }
+
+        IsLoading = false;
+    }
+
+    private void SetupSemesterInfo(Semester semester)
+    {
+        SemesterStartDate = semester.StartDate;
+
+        // Tính tổng số tuần
+        var days = semester.EndDate.DayNumber - semester.StartDate.DayNumber;
+        TotalWeeks = (days / 7) + 1;
+
+        if (Schedule != null)
+        {
+            // Tính tuần của ngày hiện tại trong lịch
+            var currentDays = Schedule.Date.DayNumber - semester.StartDate.DayNumber;
+            CurrentWeekNum = (currentDays / 7) + 1;
+
+            // Fallback nếu ngày nằm ngoài range (âm)
+            if (CurrentWeekNum < 1) CurrentWeekNum = 1;
+
+            // Gán giá trị mặc định cho Dropdown
+            SelectedWeekIndex = CurrentWeekNum - 1;
+            SelectedDayOfWeek = Schedule.Date.DayOfWeek;
+        }
+    }
+
+    private void OnCourseChanged(int newCourseId)
+    {
+        if (Schedule == null) return;
+        Schedule.CourseId = newCourseId;
+
+        var course = Courses.FirstOrDefault(c => c.Id == newCourseId);
+        if (course?.Semester != null)
+        {
+            SetupSemesterInfo(course.Semester);
+            // Tự động tính lại ngày theo tuần 1 nếu đổi khóa mới
+            RecalculateDate();
+        }
+        else
+        {
+            SemesterStartDate = default;
+            TotalWeeks = 0;
+        }
+    }
+
+    private void OnWeekChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int idx))
+        {
+            SelectedWeekIndex = idx;
+            RecalculateDate();
+        }
+    }
+
+    private void OnDayChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<DayOfWeek>(e.Value?.ToString(), out var day))
+        {
+            SelectedDayOfWeek = day;
+            RecalculateDate();
+        }
+    }
+
+    private void RecalculateDate()
+    {
+        if (Schedule == null || SemesterStartDate == default) return;
+
+        // Ngày bắt đầu của Tuần được chọn
+        var weekStartDate = SemesterStartDate.AddDays(SelectedWeekIndex * 7);
+
+        // Tìm ngày Thứ 2 đầu tuần
+        int diff = (int)weekStartDate.DayOfWeek - (int)DayOfWeek.Monday;
+        if (diff < 0) diff += 7;
+        var mondayOfWeek = weekStartDate.AddDays(-diff);
+
+        // Cộng thêm số ngày để ra Thứ mong muốn (Mon=0...Sun=6)
+        int targetDayVal = (int)SelectedDayOfWeek == 0 ? 6 : (int)SelectedDayOfWeek - 1;
+
+        // Cập nhật vào Model
+        Schedule.Date = mondayOfWeek.AddDays(targetDayVal);
     }
 
     private async Task UpdateSchedule()
     {
+        if (Schedule == null || Schedule.CourseId == 0) return;
+
         using var context = DbFactory.CreateDbContext();
-        context.Attach(Schedule!).State = EntityState.Modified;
-        try { await context.SaveChangesAsync(); }
-        catch (DbUpdateConcurrencyException)
+
+        // Fetch lại bản ghi gốc từ DB để cập nhật an toàn
+        var dbSchedule = await context.Schedules.FindAsync(Schedule.Id);
+
+        if (dbSchedule != null)
         {
-            if (!ScheduleExists(Schedule!.Id)) NavigationManager.NavigateTo("notfound");
-            else throw;
+            // Map dữ liệu mới vào
+            dbSchedule.CourseId = Schedule.CourseId;
+            dbSchedule.Date = Schedule.Date;
+            dbSchedule.StartTime = Schedule.StartTime;
+            dbSchedule.EndTime = Schedule.EndTime;
+            dbSchedule.Room = Schedule.Room;
+
+            await context.SaveChangesAsync();
         }
+
         NavigationManager.NavigateTo("/schedules");
     }
-    private bool ScheduleExists(int id) { using var context = DbFactory.CreateDbContext(); return context.Schedules.Any(e => e.Id == id); }
 }
