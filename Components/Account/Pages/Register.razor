@@ -35,6 +35,16 @@
             <ValidationSummary class="validation-message" role="alert" style="margin-bottom: 1rem;" />
 
             <div class="form-grid" style="grid-template-columns: 1fr; gap: 1rem;">
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <div style="position: relative;">
+                        <InputText @bind-Value="Input.Name" class="form-control" placeholder="John Doe" style="padding-left: 2.5rem;" />
+                        <i class="fa-solid fa-user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+                    </div>
+                    <ValidationMessage For="() => Input.Name" class="validation-message" />
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Email Address</label>
                     <div style="position: relative;">
@@ -79,7 +89,7 @@
     private IEnumerable<IdentityError>? identityErrors;
 
     [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+    public InputModel Input { get; set; } = new(); // Đổi thành public để tránh lỗi binding
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
@@ -89,6 +99,9 @@
     public async Task RegisterUser()
     {
         var user = CreateUser();
+
+        // 2. GÁN GIÁ TRỊ NAME VÀO USER
+        user.Name = Input.Name;
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -100,15 +113,19 @@
         {
             Logger.LogInformation("User created a new account with password.");
 
+            // Mặc định gán Role Student cho tài khoản mới
+            await UserManager.AddToRoleAsync(user, "Student");
+
             var userId = await UserManager.GetUserIdAsync(user);
             var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
             var callbackUrl = NavigationManager.GetUriWithQueryParameters(
                 NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
                 new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
             await SignInManager.SignInAsync(user, isPersistent: false);
-            RedirectManager.RedirectTo("/"); // Chuyển về trang chủ thay vì ReturnUrl
+            RedirectManager.RedirectTo("/");
         }
         else
         {
@@ -138,8 +155,14 @@
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }
 
-    private sealed class InputModel
+    // 3. CẬP NHẬT CLASS INPUTMODEL (Public)
+    public sealed class InputModel
     {
+        // Thêm trường Name
+        [Required(ErrorMessage = "Full Name is required")]
+        [Display(Name = "Full Name")]
+        public string Name { get; set; } = "";
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]

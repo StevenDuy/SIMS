@@ -93,3 +93,4 @@ namespace SIMS
         }
     }
 }
+public partial class Program { }
